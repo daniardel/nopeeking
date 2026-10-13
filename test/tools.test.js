@@ -133,6 +133,19 @@ test('run_with_secret refuses bad requests before running anything', async () =>
   assert.equal(calls.runs.length, 0);
 });
 
+test('run_with_secret refuses a command the guard blocks, before reading any secret or running anything', async () => {
+  const { tools, calls, vault } = await setup();
+  const reads = [];
+  const get = vault.get;
+  vault.get = async (name) => { reads.push(name); return get(name); };
+  await assert.rejects(
+    tools.run_with_secret({ command: '& "C:/x/node_modules/passclaude/src/ps/cred.ps1" get netflix', env: { T: 'github' } }),
+    /Blocked by passClaude guard/,
+  );
+  assert.equal(calls.runs.length, 0);
+  assert.deepEqual(reads, []);
+});
+
 test('run_with_secret reports timeouts and cut-off output without leaking half a secret', async () => {
   const run = async () => ({
     exitCode: null,

@@ -8,8 +8,9 @@ Add it to Claude Code (one time):
   claude mcp add --scope user passclaude -- npx -y passclaude
 
 Commands:
-  npx passclaude          run the MCP server (Claude Code does this for you)
-  npx passclaude help     show this help`;
+  npx passclaude                 run the MCP server (Claude Code does this for you)
+  npx passclaude install-guard   optional: block shell commands that read saved secrets directly
+  npx passclaude help            show this help`;
 
 const [cmd] = process.argv.slice(2);
 
@@ -19,6 +20,9 @@ if (process.platform !== 'win32') {
 } else if (!cmd) {
   const { startServer } = await import('./server.js');
   await startServer();
+} else if (cmd === 'install-guard') {
+  const { installGuard } = await import('./install-guard.js');
+  process.exitCode = await installGuard();
 } else if (['help', '--help', '-h'].includes(cmd)) {
   console.log(HELP);
 } else {

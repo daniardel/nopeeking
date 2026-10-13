@@ -1,6 +1,7 @@
 // The seven passClaude tools. Each handler takes the tool's arguments and returns the text Claude sees.
 // No handler ever returns a secret value. Refusals are thrown as Errors with a plain-English next step.
 import fs from 'node:fs';
+import guard from '../hook/guard.cjs';
 import { checkName, KINDS } from './vault.js';
 import { normalizeSite } from './sitelock.js';
 import { typeSecret } from './typer.js';
@@ -98,6 +99,9 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
 
     async run_with_secret({ command, env, cwd, timeout_sec: timeoutSec = 120 }) {
       if (typeof command !== 'string' || !command.trim()) throw new Error('command is empty.');
+      // The same check the guard hook makes for Bash and PowerShell: this command could print a saved value by itself.
+      const blocked = guard.verdict({ tool_input: { command } });
+      if (blocked) throw new Error(blocked);
       const mapping = Object.entries(env ?? {});
       if (mapping.length === 0) {
         throw new Error('env must map at least one environment variable to a saved secret, like {"GITHUB_TOKEN": "github"}.');

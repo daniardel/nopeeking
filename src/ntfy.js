@@ -11,11 +11,15 @@ export function createNtfy({ baseUrl = 'https://ntfy.sh', fetchImpl = globalThis
       return res.json();
     },
 
-    /** Calls onMessage(text, id) for each message until the stream ends or `signal` aborts. */
-    async subscribe(topic, onMessage, { since, signal } = {}) {
+    /**
+     * Calls onMessage(text, id) for each message until the stream ends or `signal` aborts.
+     * Calls onOpen() once, as soon as the relay has accepted the subscription.
+     */
+    async subscribe(topic, onMessage, { since, signal, onOpen } = {}) {
       const query = since ? `?since=${encodeURIComponent(since)}` : '';
       const res = await fetchImpl(`${base}/${topic}/json${query}`, { signal });
       if (!res.ok) throw new Error(`Relay subscribe failed: HTTP ${res.status}`);
+      onOpen?.();
       const decoder = new TextDecoder();
       let buffer = '';
       for await (const chunk of res.body) {

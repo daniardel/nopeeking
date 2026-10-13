@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLOSE_ACK_WAIT_MS, CLOSE_DRAIN_MS, createPhone } from '../src/phone.js';
+import { CLOSE_ACK_WAIT_MS, CLOSE_DRAIN_MS, RELAY_OPEN_WAIT_MS, createPhone } from '../src/phone.js';
 import { aadFor, deriveKey, fromB64u, generateKeyPair, seal, toB64u, unseal } from '../docs/e2e.js';
 import { fakeNtfy, memoryVault } from './helpers.js';
 
@@ -332,4 +332,57 @@ test('a start still in progress when close() is called registers nothing', async
   await phone.close();
   await refused;
   assert.equal(ntfy.subscribes, 0);
+});
+
+// ---- Final review: when the relay can't be reached, start() says so right away instead of returning a dead link ----
+
+const UNREACHABLE = 'Could not reach the relay (relay.test) from this PC. Use add_secret (PC popup) instead.';
+
+test('start refuses at once when the relay cannot be reached, and leaves no link waiting', async () => {
+  const ntfy = fakeNtfy({ mode: 'unreachable' });
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE, retryMs: 5 });
+  const started = Date.now();
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), { message: UNREACHABLE });
+  assert.ok(Date.now() - started < 1000, 'start should not wait out the bound when the relay refuses at once');
+  assert.equal(await phone.check('gh', 10), 'none');
+  // The listener stopped: it does not keep retrying in the background.
+  const tries = ntfy.subscribes;
+  await sleep(50);
+  assert.equal(ntfy.subscribes, tries);
+  // The name is free again: a second try is not refused as "already waiting".
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), { message: UNREACHABLE });
+  ntfy.mode = 'open';
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  assert.ok(link.startsWith(PAGE));
+  phone.close();
+});
+
+test('start gives up when the relay connection never opens, after the bound', async () => {
+  const ntfy = fakeNtfy({ mode: 'never-opens' });
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE, openTimeoutMs: 100 });
+  const started = Date.now();
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), { message: UNREACHABLE });
+  const waited = Date.now() - started;
+  assert.ok(waited >= 90 && waited < 1000, `start waited ${waited} ms`);
+  assert.equal(await phone.check('gh', 10), 'none');
+});
+
+test('the relay bound is 8 seconds by default, and the message names a custom relay', async () => {
+  assert.equal(RELAY_OPEN_WAIT_MS, 8000);
+  const ntfy = fakeNtfy({ mode: 'unreachable' });
+  ntfy.baseUrl = 'https://ntfy.example.com:8443';
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), {
+    message: 'Could not reach the relay (ntfy.example.com:8443) from this PC. Use add_secret (PC popup) instead.',
+  });
+});
+
+test('start returns the link as soon as the relay connection opens', async () => {
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  const started = Date.now();
+  await phone.start({ name: 'gh', kind: 'command' });
+  assert.ok(Date.now() - started < 1000);
+  assert.equal(ntfy.subscribes, 1);
+  phone.close();
 });

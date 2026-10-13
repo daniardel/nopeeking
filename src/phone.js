@@ -3,6 +3,9 @@ import { aadFor, deriveKey, fromB64u, generateKeyPair, randomTopic, seal, toB64u
 
 export const LINK_TTL_MS = 5 * 60_000;
 
+/** How long start() waits for the relay connection to open before telling the user to use the PC popup instead. */
+export const RELAY_OPEN_WAIT_MS = 8000;
+
 /** How long close() waits for messages still being saved or acknowledged, before giving up on them. */
 export const CLOSE_ACK_WAIT_MS = 3000;
 
@@ -19,7 +22,18 @@ function settledWithin(promises, ms) {
   return Promise.race([Promise.allSettled(promises), timeout]).finally(() => clearTimeout(timer));
 }
 
-export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK_TTL_MS, retryMs = 2000 }) {
+/** The relay's host, such as ntfy.sh, for messages to the user. */
+function relayHost(baseUrl) {
+  try {
+    return new URL(baseUrl).host;
+  } catch {
+    return baseUrl;
+  }
+}
+
+export function createPhone({
+  vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK_TTL_MS, retryMs = 2000, openTimeoutMs = RELAY_OPEN_WAIT_MS,
+}) {
   const pending = new Map(); // name -> request
   const starting = new Set(); // names whose start() is still in progress
   const inFlight = new Set(); // handle() calls still saving a secret or publishing its ack
@@ -90,7 +104,11 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
     }
   }
 
-  async function listen(req, since) {
+  /**
+   * Keeps a relay connection open for req until it is finished, reconnecting when it drops. Calls reached(true) each time
+   * a connection opens and reached(false) each time one fails; start() only looks at the first call.
+   */
+  async function listen(req, since, reached) {
     const seen = new Set();
     while (req.status === 'waiting') {
       try {
@@ -98,9 +116,9 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
           if (seen.has(id)) return;
           seen.add(id);
           await track(handle(req, text));
-        }, { since, signal: req.controller.signal });
+        }, { since, signal: req.controller.signal, onOpen: () => reached(true) });
       } catch {
-        // connection dropped or aborted; loop decides
+        reached(false); // could not connect, dropped or aborted; the loop decides
       }
       if (req.status === 'waiting') await sleep(retryMs);
     }
@@ -133,8 +151,21 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
         req.timer = setTimeout(() => expire(req), ttlMs);
         req.timer.unref?.();
         pending.set(name, req);
-        // 'all' returns only this link's messages (the topic is new and random), so no clock is involved.
-        listen(req, 'all').catch(() => {});
+        // Hand out the link only once the relay has accepted the connection: a link the PC can't hear would leave the user
+        // waiting for nothing. Only this first connection counts; later drops are retried quietly by listen().
+        let timer;
+        const opened = await new Promise((resolve) => {
+          timer = setTimeout(() => resolve(false), openTimeoutMs);
+          // 'all' returns only this link's messages (the topic is new and random), so no clock is involved.
+          listen(req, 'all', resolve).catch(() => {});
+        });
+        clearTimeout(timer);
+        if (!opened || closed) {
+          finish(req, 'expired'); // stops listening
+          pending.delete(name);
+          if (closed) throw new Error('passClaude is shutting down.');
+          throw new Error(`Could not reach the relay (${relayHost(ntfy.baseUrl)}) from this PC. Use add_secret (PC popup) instead.`);
+        }
 
         const params = new URLSearchParams({
           v: '1', t: topic, k: toB64u(keys.publicKeyRaw), n: name, kind, s: site ?? '',

@@ -36,3 +36,24 @@ test('publish and subscribe throw on HTTP errors', async () => {
   await assert.rejects(ntfy.publish('t', 'x'), /503/);
   await assert.rejects(ntfy.subscribe('t', () => {}), /503/);
 });
+
+test('subscribe calls onOpen once after the relay answers 200, before any message, and never on a failure', async () => {
+  const events = [];
+  const fetchImpl = async () => ({
+    ok: true,
+    body: (async function* () {
+      yield encode('{"event":"message","id":"a","message":"one"}\n');
+      yield encode('{"event":"message","id":"b","message":"two"}\n');
+    })(),
+  });
+  await createNtfy({ baseUrl: 'https://relay.test', fetchImpl }).subscribe('t', (m) => { events.push(m); }, { onOpen: () => events.push('open') });
+  assert.deepEqual(events, ['open', 'one', 'two']);
+
+  let opened = 0;
+  const onOpen = () => { opened += 1; };
+  const httpError = createNtfy({ baseUrl: 'https://relay.test', fetchImpl: async () => ({ ok: false, status: 503 }) });
+  await assert.rejects(httpError.subscribe('t', () => {}, { onOpen }), /503/);
+  const offline = createNtfy({ baseUrl: 'https://relay.test', fetchImpl: async () => { throw new TypeError('fetch failed'); } });
+  await assert.rejects(offline.subscribe('t', () => {}, { onOpen }), /fetch failed/);
+  assert.equal(opened, 0);
+});

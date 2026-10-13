@@ -94,10 +94,10 @@ export function createDeps(env = process.env) {
 export async function startServer() {
   const deps = createDeps();
   const server = createServer(deps);
-  process.stdin.on('end', () => {
+  process.stdin.on('end', async () => {
     // On Windows a child outlives its parent: stop any running command first, so it does not keep its secrets or its script file.
     stopAll();
-    deps.phone.close();
+    await deps.phone.close(); // let a phone confirmation that is already on its way reach the relay
     process.exit(0);
   });
   await server.connect(new StdioServerTransport());

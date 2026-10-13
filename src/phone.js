@@ -3,11 +3,23 @@ import { aadFor, deriveKey, fromB64u, generateKeyPair, randomTopic, seal, toB64u
 
 export const LINK_TTL_MS = 5 * 60_000;
 
+/** How long close() waits for messages still being saved or acknowledged, before giving up on them. */
+export const CLOSE_ACK_WAIT_MS = 3000;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Resolves once every promise has settled, or after `ms`. The timer is cleared as soon as either happens. */
+function settledWithin(promises, ms) {
+  if (promises.length === 0) return Promise.resolve();
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(resolve, ms); });
+  return Promise.race([Promise.allSettled(promises), timeout]).finally(() => clearTimeout(timer));
+}
 
 export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK_TTL_MS, retryMs = 2000 }) {
   const pending = new Map(); // name -> request
   const starting = new Set(); // names whose start() is still in progress
+  const inFlight = new Set(); // handle() calls still saving a secret or publishing its ack
 
   function finish(req, status) {
     if (req.status !== 'waiting') return;
@@ -64,6 +76,16 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
     await reply({ ok: true });
   }
 
+  /** Records a message that is still being saved or acknowledged, so close() can wait for it. */
+  async function track(work) {
+    inFlight.add(work);
+    try {
+      await work;
+    } finally {
+      inFlight.delete(work);
+    }
+  }
+
   async function listen(req, since) {
     const seen = new Set();
     while (req.status === 'waiting') {
@@ -71,7 +93,7 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
         await ntfy.subscribe(req.topic, async (text, id) => {
           if (seen.has(id)) return;
           seen.add(id);
-          await handle(req, text);
+          await track(handle(req, text));
         }, { since, signal: req.controller.signal });
       } catch {
         // connection dropped or aborted; loop decides
@@ -135,8 +157,10 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
       });
     },
 
+    /** Ends every waiting link. Resolves once messages already being saved have been acknowledged (or after CLOSE_ACK_WAIT_MS). */
     close() {
       for (const req of pending.values()) expire(req);
+      return settledWithin([...inFlight], CLOSE_ACK_WAIT_MS);
     },
   };
 }

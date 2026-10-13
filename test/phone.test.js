@@ -235,3 +235,56 @@ test('the phone asks the relay for every message on its new topic, so no clock i
   assert.deepEqual(since, ['all']);
   phone.close();
 });
+
+// ---- Follow-up: close() waits for the phone's confirmation before the process exits ----
+
+const ackPublished = (ntfy) => ntfy.published.some(({ message }) => message.includes('"t":"ack"'));
+
+/** A relay that never accepts an ack (the reply to the phone), like a hung connection to ntfy.sh. */
+function hungAcks(ntfy) {
+  const publish = ntfy.publish;
+  ntfy.publish = function (topic, message) {
+    return message.includes('"t":"ack"') ? new Promise(() => {}) : publish.call(this, topic, message);
+  };
+  return ntfy;
+}
+
+test('close waits for a slow ack to be published before it resolves', async () => {
+  const ntfy = slowAcks(fakeNtfy(), 100);
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const sent = phoneSends(link, ntfy, 'slow-ack-close');
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  await phone.close();
+  assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
+  const { key, req } = await sent;
+  assert.deepEqual(await acks(ntfy, key, req), [{ ok: true }]);
+});
+
+test('close gives up on a hung ack after about 3 seconds', async () => {
+  const ntfy = hungAcks(fakeNtfy());
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  phoneSends(link, ntfy, 'hung-ack-value'); // never settles: the ack it waits for is never published
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  const started = Date.now();
+  await phone.close();
+  const waited = Date.now() - started;
+  assert.ok(waited >= 2900 && waited < 3500, `close waited ${waited} ms`);
+});
+
+test('close waits for a save that is already running, then for its ack', async () => {
+  const vault = memoryVault();
+  const put = vault.put;
+  let putStarted = false;
+  vault.put = async (...args) => { putStarted = true; await sleep(150); return put(...args); };
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const sent = phoneSends(link, ntfy, 'busy-save-value');
+  await waitFor(() => putStarted);
+  await phone.close();
+  assert.equal(await vault.get('gh'), 'busy-save-value');
+  assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
+  await sent;
+});

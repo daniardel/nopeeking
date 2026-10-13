@@ -39,5 +39,5 @@ try {
   console.log(`ERROR: ${e.message}`);
   process.exitCode = 1;
 }
-deps.phone.close();
+await deps.phone.close();
 process.exit();

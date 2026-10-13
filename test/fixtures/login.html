@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>passClaude test login</title></head>
+<body>
+  <h1>passClaude test login</h1>
+  <p><label>Username <input id="user" type="text" autocomplete="off"></label></p>
+  <p><label>Password <input id="pass" type="password" autocomplete="off"></label></p>
+  <p><button type="button" id="check">Check</button> <button type="button" id="clear">Clear</button></p>
+  <p id="result">not checked</p>
+  <script>
+    // Dummy value only. Matches DUMMY in scripts/dev.js.
+    const EXPECTED = 'Spike-"Test"-$1-ü-🔑';
+    document.getElementById('check').onclick = () => {
+      const v = document.getElementById('pass').value;
+      document.getElementById('result').textContent = v === EXPECTED ? 'MATCH' : `NO MATCH (length ${v.length})`;
+    };
+    document.getElementById('clear').onclick = () => { document.getElementById('pass').value = ''; };
+  </script>
+</body>
+</html>

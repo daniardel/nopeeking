@@ -1,0 +1,24 @@
+// Windows-side Chrome checks and typing, via src/ps/focus.ps1 and src/ps/type.ps1.
+import { runPs, EXIT } from './windows.js';
+
+export function createWinOps({ run = runPs } = {}) {
+  return {
+    /** Every Chrome window with the text in its address bar. */
+    async chromeWindows() {
+      const res = await run('focus.ps1', [], '', { timeoutMs: 20_000 });
+      if (res.code !== EXIT.OK) throw new Error(`Couldn't inspect Chrome windows (exit code ${res.code}).`);
+      const out = res.stdout.trim();
+      if (!out) return [];
+      const parsed = JSON.parse(out);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    },
+
+    /** 'TYPED', or the refusal code printed by type.ps1. */
+    async typeInto(name, hwnd, url) {
+      const res = await run('type.ps1', [], JSON.stringify({ name, hwnd, url }), { timeoutMs: 30_000 });
+      const word = res.stdout.trim();
+      if (res.code === EXIT.OK && word === 'TYPED') return 'TYPED';
+      return word || `EXIT_${res.code}`;
+    },
+  };
+}

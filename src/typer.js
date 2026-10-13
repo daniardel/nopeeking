@@ -1,0 +1,33 @@
+// type_secret: pick the right Chrome window, enforce the site lock, then let type.ps1 type the secret.
+import { hostOf, siteMatches } from './sitelock.js';
+
+const REASONS = {
+  NO_FOCUS: "Couldn't bring Chrome to the front. The PC must be unlocked for typing to work. Nothing was typed.",
+  URL_CHANGED: 'The page changed while typing was being prepared. Nothing was typed. Try again.',
+  NOT_PASSWORD_FIELD: 'The focused box in Chrome is not a password field. Click the password box first, then try again. Nothing was typed.',
+  NOT_FOUND: 'The secret disappeared from the vault. Nothing was typed.',
+  INTERRUPTED: 'Another window took focus while typing. The password box may be partly filled: clear it and try again.',
+};
+
+export async function typeSecret({ name, vault, win }) {
+  const meta = await vault.meta(name);
+  if (!meta) return { ok: false, reason: `No secret named "${name}".` };
+  if (meta.kind !== 'web') return { ok: false, reason: `"${name}" is a command secret and can only be used with run_with_secret.` };
+
+  const windows = await win.chromeWindows();
+  if (windows.length === 0) return { ok: false, reason: 'No Chrome window found. Open the login page in Chrome first.' };
+
+  const matching = windows.filter((w) => siteMatches(w.url, meta.site));
+  const target = matching.find((w) => w.foreground) ?? (matching.length === 1 ? matching[0] : null);
+  if (!target) {
+    if (matching.length > 1) {
+      return { ok: false, reason: `Several Chrome windows are on ${meta.site}. Bring the right one to the front or close the others, then try again.` };
+    }
+    const shown = [...new Set(windows.map((w) => hostOf(w.url) ?? w.url))].join(', ');
+    return { ok: false, reason: `Site lock: "${name}" is locked to ${meta.site}, but Chrome is showing ${shown}. Nothing was typed.` };
+  }
+
+  const result = await win.typeInto(name, target.hwnd, target.url);
+  if (result === 'TYPED') return { ok: true };
+  return { ok: false, reason: REASONS[result] ?? `Typing failed (${result}). Nothing was typed.` };
+}

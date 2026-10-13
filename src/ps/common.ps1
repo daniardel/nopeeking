@@ -140,9 +140,13 @@ namespace PassClaude {
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int cmd);
     [DllImport("user32.dll")] private static extern bool AttachThreadInput(uint from, uint to, bool attach);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindow(IntPtr hwnd, uint cmd);
     [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
 
     public static int ProcessId(IntPtr hwnd) { uint pid; GetWindowThreadProcessId(hwnd, out pid); return (int)pid; }
+
+    // True for owned windows (GW_OWNER = 4), such as Chrome's "Save password" bubble. Real browser windows have no owner.
+    public static bool HasOwner(IntPtr hwnd) { return GetWindow(hwnd, 4) != IntPtr.Zero; }
 
     public static string ProcessName(IntPtr hwnd) {
       try { return System.Diagnostics.Process.GetProcessById(ProcessId(hwnd)).ProcessName; } catch { return ""; }

@@ -22,10 +22,16 @@ function Get-AddressBarText([IntPtr]$Hwnd) {
     $named = [System.Windows.Automation.PropertyCondition]::new($AE::NameProperty, 'Address and search bar')
     $both = [System.Windows.Automation.AndCondition]::new([System.Windows.Automation.Condition[]]@($isEdit, $named))
     $edit = $root.FindFirst($Descendants, $both)
+    # Never read a password box, whatever it is called.
+    if ($edit -and $edit.Current.IsPassword) { $edit = $null }
     if (-not $edit) {
-      # Non-English Chrome: the first edit box that is not inside the web page is the address bar.
-      $edit = $root.FindFirst($Descendants, $isEdit)
-      if ($edit -and (Test-InsideDocument $edit)) { $edit = $null }
+      # Non-English Chrome: the first edit box that is neither a password box nor inside the web page is the address bar.
+      foreach ($candidate in $root.FindAll($Descendants, $isEdit)) {
+        if ($candidate.Current.IsPassword) { continue }
+        if (Test-InsideDocument $candidate) { continue }
+        $edit = $candidate
+        break
+      }
     }
     if (-not $edit) { return $null }
     return $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value

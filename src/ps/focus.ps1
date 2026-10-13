@@ -6,6 +6,8 @@ $fg = [PassClaude.Win]::GetForegroundWindow()
 $items = @()
 foreach ($h in [PassClaude.Win]::TopWindowsOfClass('Chrome_WidgetWin_1')) {
   if ([PassClaude.Win]::ProcessName($h) -ne 'chrome') { continue }
+  # Bubbles and popups (for example "Save password?") are owned by a browser window and are not browser windows.
+  if ([PassClaude.Win]::HasOwner($h)) { continue }
   $url = Get-AddressBarText $h
   if ($null -eq $url) { continue }
   $items += [pscustomobject]@{ hwnd = $h.ToInt64().ToString(); url = [string]$url; foreground = ($h -eq $fg) }

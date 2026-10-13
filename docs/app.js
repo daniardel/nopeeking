@@ -5,6 +5,9 @@ import { parseLink } from './link.js';
 
 const ACK_WAIT_MS = 90_000;
 const POLL_MS = 2_000;
+const DAMAGED = 'This link is incomplete or damaged. Ask Claude for a new one.';
+const UNEXPECTED_REPLY = 'Unexpected reply from the relay. Try again in a minute.';
+const NO_REPLY = 'No reply from your PC. Make sure Claude Code is still running there, then ask Claude for a new link.';
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -17,13 +20,29 @@ function setStatus(text, isError = false) {
   $('status').className = isError ? 'error' : '';
 }
 
+/** An error after which this link can never work again. */
+function fatal(message) {
+  const error = new Error(message);
+  error.fatal = true;
+  return error;
+}
+
 const link = parseLink(location.hash);
+let dead = false; // the link can never work again: nothing typed is kept and Send stays off
+
+/** Clears what was typed and keeps Send off. Used when the link expires or can no longer be answered. */
+function killLink() {
+  dead = true;
+  $('value').value = '';
+  $('confirm').value = '';
+  $('send').disabled = true;
+}
 
 function tick() {
   const left = Math.max(0, Math.ceil((link.expiresAt - Date.now()) / 1000));
   if (left === 0) {
     $('expires').textContent = 'This link has expired. Ask Claude for a new one.';
-    $('send').disabled = true;
+    killLink();
     return;
   }
   $('expires').textContent = `Link expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
@@ -56,7 +75,12 @@ async function pollAck(key, since) {
 async function send(value) {
   const { req, pcKey, relay } = link;
   const keys = await generateKeyPair();
-  const key = await deriveKey(keys.privateKey, pcKey, req.topic);
+  let key;
+  try {
+    key = await deriveKey(keys.privateKey, pcKey, req.topic);
+  } catch {
+    throw fatal(DAMAGED); // the PC's key in the link is not a valid curve point
+  }
   const box = await seal(key, { value }, aadFor(req, 'sub'));
   const body = JSON.stringify({ t: 'sub', pk: toB64u(keys.publicKeyRaw), ...box });
   // ntfy.sh turns bodies over 4096 bytes into attachments, which the PC never reads. The body is ASCII, so length is bytes.
@@ -68,7 +92,13 @@ async function send(value) {
     throw new Error("Couldn't reach the relay. Check your connection and try again.");
   }
   if (!res.ok) throw new Error(`The relay refused the message (HTTP ${res.status}). Try again in a minute.`);
-  const { id } = await res.json();
+  let id;
+  try {
+    id = (await res.json())?.id;
+  } catch {
+    id = undefined;
+  }
+  if (typeof id !== 'string' || id === '') throw new Error(UNEXPECTED_REPLY);
   setStatus('Sent. Waiting for your PC to confirm…');
   const deadline = Date.now() + ACK_WAIT_MS;
   while (Date.now() < deadline) {
@@ -76,7 +106,7 @@ async function send(value) {
     const ack = await pollAck(key, id).catch(() => null);
     if (ack) return ack;
   }
-  throw new Error('No reply from your PC. Make sure Claude Code is still running there, then ask Claude for a new link.');
+  throw fatal(NO_REPLY);
 }
 
 if (link.error) {
@@ -94,11 +124,15 @@ if (link.error) {
 
   $('form').addEventListener('submit', async (event) => {
     event.preventDefault();
+    if (dead) return;
     const value = $('value').value;
     if (value.length < 4) return setStatus('Too short: at least 4 characters.', true);
     if (value.length > 1280) return setStatus('Too long: at most 1280 characters.', true);
     if (value !== $('confirm').value) return setStatus('The two entries do not match.', true);
-    if (Date.now() >= link.expiresAt) return setStatus('This link has expired. Ask Claude for a new one.', true);
+    if (Date.now() >= link.expiresAt) {
+      killLink();
+      return setStatus('This link has expired. Ask Claude for a new one.', true);
+    }
     $('send').disabled = true;
     setStatus('Encrypting and sending…');
     try {
@@ -112,7 +146,12 @@ if (link.error) {
       setStatus(`Your PC said: ${reply.error}`, true);
     } catch (e) {
       setStatus(e.message, true);
+      if (e.fatal) {
+        killLink();
+        return;
+      }
     }
-    $('send').disabled = false;
+    // Send comes back only while the link is alive: never after it has expired.
+    if (!dead && Date.now() < link.expiresAt) $('send').disabled = false;
   });
 }

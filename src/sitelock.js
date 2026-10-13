@@ -26,6 +26,8 @@ export function normalizeSite(input) {
   const site = host.replace(/^www\./, '');
   if (site.length > 150) throw new Error('Site address is too long (max 150 characters).');
   if (site !== 'localhost' && !site.includes('.')) throw new Error(`"${site}" is too broad. Use the full site, like netflix.com.`);
+  // The phone page accepts only these characters (docs/link.js), so a site with others would be a link it calls damaged.
+  if (!/^[a-z0-9.-]+$/.test(site)) throw new Error(`"${site}" has characters a website address can't have. Use something like netflix.com.`);
   return site;
 }
 

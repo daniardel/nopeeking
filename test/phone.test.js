@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createPhone } from '../src/phone.js';
+import { CLOSE_ACK_WAIT_MS, CLOSE_DRAIN_MS, createPhone } from '../src/phone.js';
 import { aadFor, deriveKey, fromB64u, generateKeyPair, seal, toB64u, unseal } from '../docs/e2e.js';
 import { fakeNtfy, memoryVault } from './helpers.js';
 
@@ -250,18 +250,22 @@ function hungAcks(ntfy) {
 }
 
 test('close waits for a slow ack to be published before it resolves', async () => {
-  const ntfy = slowAcks(fakeNtfy(), 100);
+  // The ack is slower than the drain, so a close() that only drains would resolve before it lands.
+  const ntfy = slowAcks(fakeNtfy(), CLOSE_DRAIN_MS + 500);
   const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
   const { link } = await phone.start({ name: 'gh', kind: 'command' });
   const sent = phoneSends(link, ntfy, 'slow-ack-close');
   assert.equal(await phone.check('gh', 1000), 'saved');
+  const started = Date.now();
   await phone.close();
+  const waited = Date.now() - started;
   assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
+  assert.ok(waited < CLOSE_ACK_WAIT_MS - 500, `close waited ${waited} ms: it should not sit out the cap`);
   const { key, req } = await sent;
   assert.deepEqual(await acks(ntfy, key, req), [{ ok: true }]);
 });
 
-test('close gives up on a hung ack after about 3 seconds', async () => {
+test('close stops waiting for a hung ack at the wait cap, then drains', async () => {
   const ntfy = hungAcks(fakeNtfy());
   const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
   const { link } = await phone.start({ name: 'gh', kind: 'command' });
@@ -270,22 +274,29 @@ test('close gives up on a hung ack after about 3 seconds', async () => {
   const started = Date.now();
   await phone.close();
   const waited = Date.now() - started;
-  assert.ok(waited >= 2900 && waited < 3500, `close waited ${waited} ms`);
+  assert.ok(
+    waited >= CLOSE_ACK_WAIT_MS - 100 && waited < CLOSE_ACK_WAIT_MS + CLOSE_DRAIN_MS + 1000,
+    `close waited ${waited} ms`,
+  );
 });
 
 test('close waits for a save that is already running, then for its ack', async () => {
   const vault = memoryVault();
   const put = vault.put;
   let putStarted = false;
-  vault.put = async (...args) => { putStarted = true; await sleep(150); return put(...args); };
+  // The save is slower than the drain, so a close() that only drains would resolve while it is still running.
+  vault.put = async (...args) => { putStarted = true; await sleep(CLOSE_DRAIN_MS + 500); return put(...args); };
   const ntfy = fakeNtfy();
   const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
   const { link } = await phone.start({ name: 'gh', kind: 'command' });
   const sent = phoneSends(link, ntfy, 'busy-save-value');
   await waitFor(() => putStarted);
+  const started = Date.now();
   await phone.close();
+  const waited = Date.now() - started;
   assert.equal(await vault.get('gh'), 'busy-save-value');
   assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
+  assert.ok(waited < CLOSE_ACK_WAIT_MS - 500, `close waited ${waited} ms: it should not sit out the cap`);
   await sent;
 });
 
@@ -296,5 +307,29 @@ test('close resolves only after a short drain, even with nothing in flight', asy
   const started = Date.now();
   await phone.close();
   const waited = Date.now() - started;
-  assert.ok(waited >= 190, `close resolved after ${waited} ms`);
+  assert.ok(waited >= 190 && waited < CLOSE_DRAIN_MS + 500, `close resolved after ${waited} ms`);
+});
+
+// ---- Fix round 1: once close() has run, the phone starts nothing new ----
+
+test('start refuses once the phone is shutting down, and opens no subscription', async () => {
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  await phone.close();
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), /passClaude is shutting down\./);
+  assert.equal(ntfy.subscribes, 0);
+});
+
+test('a start still in progress when close() is called registers nothing', async () => {
+  const vault = memoryVault();
+  const meta = vault.meta;
+  vault.meta = async (name) => { await sleep(50); return meta(name); };
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
+  const starting = phone.start({ name: 'gh', kind: 'command' });
+  // Attach the rejection handler before close() waits, so the rejection is never unhandled.
+  const refused = assert.rejects(starting, /passClaude is shutting down\./);
+  await phone.close();
+  await refused;
+  assert.equal(ntfy.subscribes, 0);
 });

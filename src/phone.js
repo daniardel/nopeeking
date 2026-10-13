@@ -23,6 +23,7 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
   const pending = new Map(); // name -> request
   const starting = new Set(); // names whose start() is still in progress
   const inFlight = new Set(); // handle() calls still saving a secret or publishing its ack
+  let closed = false; // set by close(); nothing new may start after that
 
   function finish(req, status) {
     if (req.status !== 'waiting') return;
@@ -107,6 +108,7 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
 
   return {
     async start({ name, kind, site }) {
+      if (closed) throw new Error('passClaude is shutting down.');
       if (kind !== 'web' && kind !== 'command') throw new Error('Kind must be "web" or "command".');
       if (kind === 'web' && !site) throw new Error('A web link needs a site, such as netflix.com.');
       if (kind === 'command' && site) throw new Error('A command link cannot have a site.');
@@ -119,6 +121,7 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
         if (await vault.meta(name)) throw new Error(`"${name}" already exists. Delete it first if you want to replace it.`);
 
         const keys = await generateKeyPair();
+        if (closed) throw new Error('passClaude is shutting down.'); // close() ran while we were waiting
         const topic = randomTopic();
         const created = now();
         const expiresAt = created + ttlMs;
@@ -167,6 +170,7 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
      * process dies with exit code 127. Callers that exit afterwards must await close() first.
      */
     close() {
+      closed = true;
       for (const req of pending.values()) expire(req);
       return settledWithin([...inFlight], CLOSE_ACK_WAIT_MS).then(() => sleep(CLOSE_DRAIN_MS));
     },

@@ -46,3 +46,10 @@ test('normalizeSite cleans user input and refuses unusable sites', () => {
   assert.throws(() => normalizeSite(''), /not a website/);
   assert.throws(() => normalizeSite(`${'a'.repeat(150)}.com`), /too long/);
 });
+
+test('normalizeSite refuses characters a website address cannot have, and keeps punycode names', () => {
+  for (const bad of ['my_site.example.com', 'a!b.com', 'a~b.com']) {
+    assert.throws(() => normalizeSite(bad), /has characters a website address can't have\. Use something like netflix\.com\./, bad);
+  }
+  assert.equal(normalizeSite('xn--bcher-kva.de'), 'xn--bcher-kva.de');
+});

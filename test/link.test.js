@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { parseLink } from '../docs/link.js';
 import { generateKeyPair, randomTopic, toB64u } from '../docs/e2e.js';
 import { createPhone } from '../src/phone.js';
+import { normalizeSite } from '../src/sitelock.js';
 import { fakeNtfy, memoryVault } from './helpers.js';
 
 async function linkHash(over = {}) {
@@ -52,4 +53,18 @@ test('reads links made by the PC side', async () => {
   assert.equal(parsed.req.name, 'netflix');
   assert.equal(parsed.relay, 'https://relay.test');
   phone.close();
+});
+
+test('every site the PC accepts is a link the page accepts', async () => {
+  for (const input of ['netflix.com', 'https://www.Netflix.com/login', 'localhost', 'bücher.de', 'xn--bcher-kva.de', 'my-app.example.co.uk']) {
+    const site = normalizeSite(input);
+    assert.equal(parseLink(await linkHash({ s: site }), 1_000_000).error, undefined, site);
+  }
+});
+
+test('the PC refuses every site the page would call damaged', async () => {
+  for (const site of ['my_site.example.com', 'a!b.com', 'a~b.com']) {
+    assert.match(parseLink(await linkHash({ s: site }), 1_000_000).error ?? '', /incomplete or damaged/, site);
+    assert.throws(() => normalizeSite(site), /has characters/, site);
+  }
 });

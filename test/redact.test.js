@@ -62,3 +62,89 @@ test('redact masks partly overlapping secrets without leaving fragments', () => 
 test('redact keeps adjacent secrets as separate masks', () => {
   assert.equal(redact('abcdwxyz', [{ name: 'A', value: 'abcd' }, { name: 'B', value: 'wxyz' }]), '••••(A)••••(B)');
 });
+
+// ---- Windows PowerShell 5.1 wraps long values and shortens them with '...'; pieces of 8+ characters are still masked ----
+// The texts below are copied from real runs of Windows PowerShell 5.1 through src/runner.js.
+
+const LONG = `eyJhbGciOiJIUzI1NiJ9.${'QWERTYuiop1234567890asdfghjklZXCVBNM'.repeat(5)}.sigSIGsig`; // 211 characters
+const GH = 'ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'; // 40 characters
+const SHAPE_SECRETS = [{ name: 'long', value: LONG }, { name: 'gh', value: GH }, { name: 'pw', value: 'Hunt3r-2-pass' }];
+
+/** Fails if any `size` consecutive characters of the secret are still in the text. */
+function assertNoPiece(text, secret, size = 8) {
+  for (let i = 0; i + size <= secret.length; i++) {
+    const piece = secret.slice(i, i + size);
+    assert.ok(!text.includes(piece), `"${piece}" is still visible in:\n${text}`);
+  }
+}
+
+test('redact masks a value that Format-List wraps onto an indented second line', () => {
+  const text = '\r\n\r\nName  : L\r\nValue : eyJhbGciOiJIUzI1NiJ9.QWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop12345678\r\n        90asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNM.sigSIGsig\r\n\r\n\r\n\r\n';
+  const out = redact(text, SHAPE_SECRETS);
+  assertNoPiece(out, LONG);
+  assert.equal(out, '\r\n\r\nName  : L\r\nValue : ••••(long)\r\n\r\n\r\n\r\n');
+});
+
+test('redact masks a wrapped tail shorter than 8 characters', () => {
+  const label = 'name_of_a_setting_that_is_long_enough_to_push_the_value_to_the_right_edge_xxxxxx';
+  const text = `\r\n\r\n${label} : ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6\r\n${' '.repeat(83)}Q7r8\r\n\r\n\r\n\r\n`;
+  const out = redact(text, SHAPE_SECRETS);
+  assert.equal(out, `\r\n\r\n${label} : ••••(gh)\r\n\r\n\r\n\r\n`);
+});
+
+test('redact masks both ends of a value that an error CategoryInfo shortens with ...', () => {
+  const lines = [
+    '    + CategoryInfo          : OperationStopped: (auth failed: gh...1l2M3n4O5p6Q7r8:String) [], RuntimeException',
+    '    + CategoryInfo          : ObjectNotFound: (C:\\nope\\ghp_A1b...1l2M3n4O5p6Q7r8:String) [Get-Item], ItemNotFoundExcep \r\n   tion',
+    '    + CategoryInfo          : OperationStopped: (bad token eyJhb...CVBNM.sigSIGsig:String) [], RuntimeException',
+  ];
+  const out = lines.map((line) => redact(line, SHAPE_SECRETS));
+  for (const line of out) {
+    assertNoPiece(line, GH);
+    assertNoPiece(line, LONG);
+  }
+  assert.deepEqual(out, [
+    '    + CategoryInfo          : OperationStopped: (auth failed: gh...••••(gh):String) [], RuntimeException',
+    '    + CategoryInfo          : ObjectNotFound: (C:\\nope\\••••(gh)...••••(gh):String) [Get-Item], ItemNotFoundExcep \r\n   tion',
+    '    + CategoryInfo          : OperationStopped: (bad token ••••(long)...••••(long):String) [], RuntimeException',
+  ]);
+});
+
+test('redact masks a value that a table cuts off with ...', () => {
+  const pad = ' '.repeat(87);
+  const text = `\r\nName                           Value${pad}\r\n----                           -----${pad}\r\nL                              eyJhbGciOiJIUzI1NiJ9.QWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjk...\r\n\r\n\r\n`;
+  const out = redact(text, SHAPE_SECRETS);
+  assertNoPiece(out, LONG);
+  assert.equal(out, `\r\nName                           Value${pad}\r\n----                           -----${pad}\r\nL                              ••••(long)...\r\n\r\n\r\n`);
+  const narrow = '0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345 Hunt3r-2-...';
+  // Only the password here: the digits in this row share 8-character pieces with the "long" test value.
+  assert.equal(redact(narrow, [{ name: 'pw', value: 'Hunt3r-2-pass' }]), '0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345 ••••(pw)...');
+});
+
+test('redact masks a value that a warning wraps across lines', () => {
+  const text = 'WARNING: tok \r\neyJhbGciOiJIUzI1NiJ9.QWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfgh\r\njklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNM.sigSIGsig\n';
+  const out = redact(text, SHAPE_SECRETS);
+  assertNoPiece(out, LONG);
+  assert.equal(out, 'WARNING: tok \r\n••••(long)\n');
+});
+
+test('redact masks pieces of 8 or more characters anywhere, but not shorter ones', () => {
+  assert.equal(redact('half of it: QWERTYuiop1234 and a bit: Yuio', SHAPE_SECRETS), 'half of it: ••••(long) and a bit: Yuio');
+});
+
+test('redact masks pieces of an encoded form too', () => {
+  const v = 'correct-horse-battery-staple';
+  const b64 = Buffer.from(v).toString('base64');
+  const out = redact(`start of the base64: ${b64.slice(0, 20)}`, [{ name: 'k', value: v }]);
+  assert.equal(out, 'start of the base64: ••••(k)');
+});
+
+test('redact handles 1 MB of ordinary output with three secrets in well under 3 seconds', () => {
+  const line = 'Some normal log output line 12345 with path C:/x/y and text... QWERTYuiop1234 done\r\n';
+  const text = line.repeat(Math.ceil((1024 * 1024) / line.length)).slice(0, 1024 * 1024);
+  const started = Date.now();
+  const out = redact(text, SHAPE_SECRETS);
+  const took = Date.now() - started;
+  assert.ok(out.includes('••••(long)'));
+  assert.ok(took < 3000, `took ${took} ms`);
+});

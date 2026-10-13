@@ -1,6 +1,21 @@
 // Hides secret values (and common encodings of them) in text before it reaches Claude.
+//
+// Windows PowerShell 5.1 does not always print a value in one piece: Format-List, warnings and the error view wrap long
+// values onto the next line (often indented), tables cut them off with '...', and an error's CategoryInfo shortens any
+// text over 40 characters to its first and last 15 ('abc...xyz'). So besides every whole form, this masks:
+// - pieces: any PIECE_LENGTH or more characters in a row of any form, wherever they appear;
+// - line joins: the same search with line breaks (and the spaces around them) removed, so a wrapped tail shorter than
+//   PIECE_LENGTH is masked together with the rest of the value, line break included;
+// - ellipsis edges: the first or last EDGE_MIN..EDGE_MAX characters of a form, right before or after '...' or '…'.
+// Shorter pieces elsewhere, other encodings and values a command reshapes on purpose are not caught.
 
 export const MIN_SECRET_LENGTH = 4;
+
+const PIECE_LENGTH = 8;
+const EDGE_MIN = 3;
+const EDGE_MAX = PIECE_LENGTH - 1;
+const LINE_BREAK_RE = /[ \t]*\r?\n[ \t]*/g;
+const ELLIPSIS_RE = /\.\.\.|…/g;
 
 export function encodedForms(value) {
   const utf8 = Buffer.from(value, 'utf8');
@@ -18,16 +33,111 @@ export function encodedForms(value) {
   return [...new Set(forms)].filter((form) => form.length >= MIN_SECRET_LENGTH);
 }
 
-/** Sorted, non-overlapping [start, end) spans of every secret occurrence in str, each with its name. */
-function mergedSpans(str, secrets) {
-  // Find every occurrence of every form, including overlapping ones.
-  const spans = [];
+/** What to look for. Each piece and edge maps to the name of the first secret it belongs to. */
+function searchFor(secrets) {
+  const forms = []; // { form, name }
+  const pieces = new Map(); // every PIECE_LENGTH-character piece of every longer form
+  const prefixes = new Map(); // the first EDGE_MIN..EDGE_MAX characters of every form
+  const suffixes = new Map(); // the last EDGE_MIN..EDGE_MAX characters of every form
+  const remember = (map, key, name) => {
+    if (!map.has(key)) map.set(key, name);
+  };
   for (const { name, value } of secrets) {
     for (const form of encodedForms(value)) {
-      for (let i = str.indexOf(form); i !== -1; i = str.indexOf(form, i + 1)) {
-        spans.push({ start: i, end: i + form.length, name });
+      forms.push({ form, name });
+      if (form.length > PIECE_LENGTH) {
+        for (let i = 0; i + PIECE_LENGTH <= form.length; i++) remember(pieces, form.slice(i, i + PIECE_LENGTH), name);
+      }
+      for (let k = EDGE_MIN; k <= Math.min(EDGE_MAX, form.length); k++) {
+        remember(prefixes, form.slice(0, k), name);
+        remember(suffixes, form.slice(-k), name);
       }
     }
+  }
+  return { forms, pieces, prefixes, suffixes };
+}
+
+/**
+ * Every [start, end) span of str where a secret shows, with its name. Unsorted and possibly overlapping.
+ * Spans of one secret that overlap the one found just before are joined right away, which keeps the list short.
+ */
+function findSpans(str, { forms, pieces, prefixes, suffixes }) {
+  const spans = [];
+  const add = (start, end, name) => {
+    const last = spans.at(-1);
+    if (last?.name === name && start >= last.start && start < last.end) last.end = Math.max(last.end, end);
+    else spans.push({ start, end, name });
+  };
+  // Whole forms, including overlapping occurrences.
+  for (const { form, name } of forms) {
+    for (let i = str.indexOf(form); i !== -1; i = str.indexOf(form, i + 1)) add(i, i + form.length, name);
+  }
+  // Pieces, in one pass over the text.
+  if (pieces.size > 0) {
+    for (let i = 0; i + PIECE_LENGTH <= str.length; i++) {
+      const name = pieces.get(str.slice(i, i + PIECE_LENGTH));
+      if (name !== undefined) add(i, i + PIECE_LENGTH, name);
+    }
+  }
+  // The longest prefix that ends right at an ellipsis, and the longest suffix that starts right after it.
+  for (const match of str.matchAll(ELLIPSIS_RE)) {
+    const before = match.index;
+    const after = before + match[0].length;
+    for (let k = Math.min(EDGE_MAX, before); k >= EDGE_MIN; k--) {
+      const name = prefixes.get(str.slice(before - k, before));
+      if (name !== undefined) {
+        add(before - k, before, name);
+        break;
+      }
+    }
+    for (let k = Math.min(EDGE_MAX, str.length - after); k >= EDGE_MIN; k--) {
+      const name = suffixes.get(str.slice(after, after + k));
+      if (name !== undefined) {
+        add(after, after + k, name);
+        break;
+      }
+    }
+  }
+  return spans;
+}
+
+/** str without its line breaks and the spaces and tabs around them, and for each of its characters, where it came from. */
+function withoutLineBreaks(str) {
+  const from = new Int32Array(str.length);
+  const parts = [];
+  let length = 0;
+  let pos = 0;
+  for (const match of str.matchAll(LINE_BREAK_RE)) {
+    for (let i = pos; i < match.index; i++) from[length++] = i;
+    parts.push(str.slice(pos, match.index));
+    pos = match.index + match[0].length;
+  }
+  if (parts.length === 0) return null;
+  for (let i = pos; i < str.length; i++) from[length++] = i;
+  parts.push(str.slice(pos));
+  return { text: parts.join(''), from };
+}
+
+const isHigh = (code) => code >= 0xd800 && code <= 0xdbff;
+const isLow = (code) => code >= 0xdc00 && code <= 0xdfff;
+
+/** Sorted, non-overlapping [start, end) spans of everything in str that belongs to a secret, each with its name. */
+function mergedSpans(str, secrets) {
+  const patterns = searchFor(secrets);
+  const spans = findSpans(str, patterns);
+  // The same search across line breaks. Spans that cross a break are mapped back over it, so the break is masked too.
+  const joined = withoutLineBreaks(str);
+  if (joined) {
+    for (const { start, end, name } of findSpans(joined.text, patterns)) {
+      const from = joined.from[start];
+      const to = joined.from[end - 1] + 1;
+      if (to - from > end - start) spans.push({ start: from, end: to, name });
+    }
+  }
+  // A piece can begin or end in the middle of a character that takes two UTF-16 units; mask the whole character.
+  for (const span of spans) {
+    if (isLow(str.charCodeAt(span.start)) && isHigh(str.charCodeAt(span.start - 1))) span.start -= 1;
+    if (isHigh(str.charCodeAt(span.end - 1)) && isLow(str.charCodeAt(span.end))) span.end += 1;
   }
   spans.sort((a, b) => a.start - b.start || b.end - a.end);
   // Merge spans that overlap (not merely touch); a merged span keeps the name of its first span.

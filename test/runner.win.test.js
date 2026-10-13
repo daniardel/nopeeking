@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runCommand, stopAll, OUTPUT_CAP } from '../src/runner.js';
+import { redactOutput } from '../src/redact.js';
 
 const skip = process.platform !== 'win32';
 
@@ -197,4 +198,26 @@ test('stopAll stops a running command and removes its script file', { skip }, as
 
 test('stopAll with nothing running does nothing', { skip }, () => {
   assert.doesNotThrow(() => stopAll());
+});
+
+test('masking leaves no 8 characters of a value that PowerShell wraps or shortens', { skip }, async () => {
+  const long = `eyJhbGciOiJIUzI1NiJ9.${'Q1w2E3r4T5y6U7i8O9p0'.repeat(10)}`.slice(0, 200);
+  const token = 'ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8';
+  const secrets = [{ name: 'long', value: long }, { name: 'gh', value: token }];
+  const runs = [
+    // Format-List and the error view wrap the 200-character value; the error's CategoryInfo shortens it with '...'.
+    await runCommand({ command: 'Get-ChildItem Env:T | Format-List; throw "x $env:T"', env: { T: long } }),
+    // A native program's stderr line becomes an error record whose CategoryInfo shows the token's last 15 characters.
+    await runCommand({ command: `& '${process.execPath}' -e "console.error('login failed: '+process.env.G)" 2>&1`, env: { G: token } }),
+  ];
+  // The shapes this test is about really are in the raw output.
+  assert.ok(!(runs[0].stdout + runs[0].stderr).includes(long), 'the long value was not wrapped');
+  assert.match(runs[1].stdout + runs[1].stderr, /\(login failed: g\.\.\./);
+  for (const r of runs) {
+    // Redacted the way run_with_secret does it, one stream at a time.
+    const out = redactOutput(r.stdout, secrets, { truncated: r.truncated.stdout }) + redactOutput(r.stderr, secrets, { truncated: r.truncated.stderr });
+    for (const { value } of secrets) {
+      for (let i = 0; i + 8 <= value.length; i++) assert.ok(!out.includes(value.slice(i, i + 8)), `"${value.slice(i, i + 8)}" is visible in:\n${out}`);
+    }
+  }
 });

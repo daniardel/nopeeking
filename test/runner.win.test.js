@@ -7,6 +7,12 @@ import { runCommand, OUTPUT_CAP } from '../src/runner.js';
 
 const skip = process.platform !== 'win32';
 
+// Puts an environment variable back the way it was, including leaving it unset.
+function restoreEnv(name, value) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 test('passes env vars to the command and returns its output', { skip }, async () => {
   const r = await runCommand({ command: 'Write-Output "v=$env:PC_TEST_VAR"', env: { PC_TEST_VAR: 'abc "q" ü' } });
   assert.equal(r.exitCode, 0);
@@ -90,6 +96,44 @@ test('runs from a temporary script file and removes it afterwards', { skip }, as
   assert.match(path.basename(scriptPath), /^passclaude-.*\.ps1$/, `stdout was: ${r.stdout}`);
   assert.equal(fs.existsSync(scriptPath), false);
   assert.ok(countScripts() <= before, 'a temporary script file was left behind');
+});
+
+test('a native command that fails as the last statement gives its exit code', { skip }, async () => {
+  const r = await runCommand({ command: 'cmd /c exit 5' });
+  assert.equal(r.exitCode, 5);
+});
+
+test('a non-terminating error as the last statement gives exit code 1', { skip }, async () => {
+  const r = await runCommand({ command: 'Write-Error "w"' });
+  assert.equal(r.exitCode, 1);
+});
+
+test('a failing cmdlet as the last statement gives exit code 1', { skip }, async () => {
+  const r = await runCommand({ command: 'Get-Item C:\\definitely-not-here-xyz' });
+  assert.equal(r.exitCode, 1);
+});
+
+test('a successful last statement gives exit code 0, also with a trailing comment', { skip }, async () => {
+  const ok = await runCommand({ command: 'Write-Output ok' });
+  assert.equal(ok.exitCode, 0);
+  const commented = await runCommand({ command: 'Write-Output ok # trailing comment' });
+  assert.equal(commented.exitCode, 0);
+  assert.match(commented.stdout, /ok/);
+});
+
+test('reports that the command could not be prepared when the temporary folder is missing', { skip }, async () => {
+  const missing = path.join(os.tmpdir(), `passclaude-missing-${Date.now()}`);
+  assert.equal(fs.existsSync(missing), false);
+  const savedTemp = process.env.TEMP;
+  const savedTmp = process.env.TMP;
+  process.env.TEMP = missing;
+  process.env.TMP = missing;
+  try {
+    await assert.rejects(runCommand({ command: 'Write-Output ok' }), { name: 'Error', message: "Couldn't prepare the command." });
+  } finally {
+    restoreEnv('TEMP', savedTemp);
+    restoreEnv('TMP', savedTmp);
+  }
 });
 
 test('returns promptly when a grandchild keeps the output pipes open after PowerShell exits', { skip }, async () => {

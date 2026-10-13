@@ -16,6 +16,10 @@ const EXIT_GRACE_MS = 2000;
 // After taskkill, how long to wait for PowerShell to exit before killing it directly.
 const KILL_BACKSTOP_MS = 5000;
 
+// Appended after the user's command. -File exits 0 even when the last statement failed, so this reads $? first and
+// exits non-zero for a failing last statement. A command that calls exit or throws never gets here, which is right.
+const POSTAMBLE = '$passclaudeOk = $?; $passclaudeCode = $LASTEXITCODE\nif (-not $passclaudeOk) { if ($passclaudeCode) { exit $passclaudeCode } else { exit 1 } }';
+
 // Best effort. A file that PowerShell still has open cannot be deleted yet, and nothing depends on it going.
 function removeScript(file) {
   try {
@@ -26,7 +30,7 @@ function removeScript(file) {
 }
 
 export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
-  const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}`;
+  const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}\n${POSTAMBLE}`;
   return new Promise((resolve, reject) => {
     // A script file, not -EncodedCommand: for encoded commands PowerShell writes stderr as XML (CLIXML), which escapes the text
     // and mixes it with plain lines. The BOM tells Windows PowerShell 5.1 that the file is UTF-8.

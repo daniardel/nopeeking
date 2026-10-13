@@ -119,3 +119,119 @@ test('links expire, and late messages are not saved', async () => {
   assert.equal(await vault.get('gh'), null);
   assert.equal(await phone.check('unknown', 10), 'none');
 });
+
+// ---- Fix round 1: a saved secret is always reported as saved; start() is strict and race-free ----
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function waitFor(cond, ms = 2000) {
+  const end = Date.now() + ms;
+  while (!cond()) {
+    if (Date.now() > end) throw new Error('timed out waiting');
+    await sleep(5);
+  }
+}
+
+/** A relay that accepts acks (the replies to the phone) only after `ms`, like a congested ntfy.sh. */
+function slowAcks(ntfy, ms) {
+  const publish = ntfy.publish;
+  ntfy.publish = async function (topic, message) {
+    if (message.includes('"t":"ack"')) await sleep(ms);
+    return publish.call(this, topic, message);
+  };
+  return ntfy;
+}
+
+/** A relay whose current subscription the test can end on demand, so the phone has to reconnect. */
+function endableNtfy() {
+  const ntfy = fakeNtfy();
+  const subscribe = ntfy.subscribe;
+  let endCurrent = () => {};
+  ntfy.subscribe = (topic, onMessage, opts = {}) => {
+    const ends = new AbortController();
+    endCurrent = () => ends.abort();
+    opts.signal?.addEventListener('abort', () => ends.abort());
+    return subscribe.call(ntfy, topic, onMessage, { ...opts, signal: ends.signal });
+  };
+  return { ntfy, endCurrent: () => endCurrent() };
+}
+
+test('a secret saved before the expiry is reported saved even when the ack is slow', async () => {
+  const vault = memoryVault();
+  const ntfy = slowAcks(fakeNtfy(), 500);
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE, ttlMs: 200 });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const { key, req } = await phoneSends(link, ntfy, 'slow-ack-value');
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  assert.equal(await vault.get('gh'), 'slow-ack-value');
+  assert.deepEqual(await acks(ntfy, key, req), [{ ok: true }]);
+});
+
+test('a secret whose save straddles the expiry is reported saved', async () => {
+  const vault = memoryVault();
+  const put = vault.put;
+  vault.put = async (...args) => { await sleep(500); return put(...args); };
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE, ttlMs: 200 });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const { key, req } = await phoneSends(link, ntfy, 'slow-save-value');
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  assert.equal(await vault.get('gh'), 'slow-save-value');
+  assert.deepEqual(await acks(ntfy, key, req), [{ ok: true }]);
+});
+
+test('two concurrent starts for one name: exactly one succeeds', async () => {
+  const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: PAGE });
+  const results = await Promise.allSettled([
+    phone.start({ name: 'gh', kind: 'command' }),
+    phone.start({ name: 'gh', kind: 'command' }),
+  ]);
+  assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
+  const refused = results.find((r) => r.status === 'rejected');
+  assert.match(refused.reason.message, /already waiting/);
+  phone.close();
+});
+
+test('start refuses a bad kind, a web link without a site, and a command link with a site', async () => {
+  const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: PAGE });
+  await assert.rejects(phone.start({ name: 'a', kind: 'card' }), /Kind must be/);
+  await assert.rejects(phone.start({ name: 'a', kind: 'web' }), /needs a site/);
+  await assert.rejects(phone.start({ name: 'a', kind: 'web', site: '' }), /needs a site/);
+  await assert.rejects(phone.start({ name: 'a', kind: 'command', site: 'x.com' }), /cannot have a site/);
+});
+
+test('a value that is not text is refused, saves nothing, and the link keeps waiting', async () => {
+  const vault = memoryVault();
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const { key, req } = await phoneSends(link, ntfy, 12345678);
+  assert.equal(await phone.check('gh', 50), 'waiting');
+  assert.equal(await vault.get('gh'), null);
+  assert.deepEqual(await acks(ntfy, key, req), [{ ok: false, error: 'The secret must be text.' }]);
+  phone.close();
+});
+
+test('a message replayed after a reconnect is handled once (seen dedupe)', async () => {
+  const { ntfy, endCurrent } = endableNtfy();
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE, retryMs: 5 });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  const { key, req } = await phoneSends(link, ntfy, 'abc');
+  assert.equal(await phone.check('gh', 50), 'waiting');
+  endCurrent(); // drop the connection; the phone resubscribes and the relay replays the message
+  await waitFor(() => ntfy.subscribes >= 2);
+  await sleep(100); // give a duplicate handle() time to run and answer, if it wrongly does
+  assert.equal((await acks(ntfy, key, req)).length, 1);
+  phone.close();
+});
+
+test('the phone asks the relay for every message on its new topic, so no clock is involved', async () => {
+  const ntfy = fakeNtfy();
+  const since = [];
+  const subscribe = ntfy.subscribe;
+  ntfy.subscribe = (topic, onMessage, opts) => { since.push(opts.since); return subscribe(topic, onMessage, opts); };
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  await phone.start({ name: 'gh', kind: 'command' });
+  assert.deepEqual(since, ['all']);
+  phone.close();
+});

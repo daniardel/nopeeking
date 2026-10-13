@@ -81,6 +81,19 @@ export function createVault({ run = runPs } = {}) {
       if (res.code !== EXIT.OK) throw windowsFailed('save', res);
     },
 
+    async promptPut(name, meta) {
+      const res = await run(
+        'prompt.ps1',
+        [checkName(name)],
+        JSON.stringify({ comment: encodeMeta(meta), kind: meta.kind, site: meta.site ?? '' }),
+        { timeoutMs: 6 * 60_000 },
+      );
+      if (res.code === EXIT.EXISTS) throw exists(name);
+      if (res.code === EXIT.CANCELLED) return 'cancelled';
+      if (res.code !== EXIT.OK) throw windowsFailed('popup', res);
+      return 'saved';
+    },
+
     async delete(name) {
       const res = await run('cred.ps1', ['delete', checkName(name)]);
       if (res.code === EXIT.NOT_FOUND) return false;

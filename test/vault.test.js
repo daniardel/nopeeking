@@ -51,3 +51,15 @@ test('PowerShell failures never put stderr into error messages', async () => {
   const vault = createVault({ run: async () => ({ code: 1, stdout: '', stderr: 'ConvertFrom-Json: hunter2-value' }) });
   await assert.rejects(vault.put('z', meta, 'hunter2-value'), (e) => e.code === 'WINDOWS' && !e.message.includes('hunter2'));
 });
+
+test('promptPut saves what the popup returns and reports cancel', async () => {
+  const fake = fakeWindowsCred({ popupValue: 'typed-in-popup' });
+  const vault = createVault({ run: fake.run });
+  assert.equal(await vault.promptPut('netflix', meta), 'saved');
+  assert.equal(await vault.get('netflix'), 'typed-in-popup');
+  assert.deepEqual(await vault.meta('netflix'), { name: 'netflix', ...meta });
+  await assert.rejects(vault.promptPut('netflix', meta), { code: 'EXISTS' });
+  const cancelled = createVault({ run: fakeWindowsCred().run });
+  assert.equal(await cancelled.promptPut('netflix', meta), 'cancelled');
+  assert.equal(await cancelled.meta('netflix'), null);
+});

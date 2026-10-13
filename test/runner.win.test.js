@@ -121,6 +121,33 @@ test('a successful last statement gives exit code 0, also with a trailing commen
   assert.match(commented.stdout, /ok/);
 });
 
+test('a native command that writes to stderr but exits 0 stays a success with 2>&1', { skip }, async () => {
+  const node = await runCommand({ command: `& '${process.execPath}' -e "console.error('warn'); console.log('done')" 2>&1` });
+  assert.equal(node.exitCode, 0, `stdout was: ${node.stdout}`);
+  assert.match(node.stdout, /done/);
+  const cmd = await runCommand({ command: 'cmd /c "echo err 1>&2" 2>&1' });
+  assert.equal(cmd.exitCode, 0, `stdout was: ${cmd.stdout}`);
+});
+
+test('a native command that writes to stderr and fails keeps its exit code with 2>&1', { skip }, async () => {
+  const r = await runCommand({ command: 'cmd /c "echo err 1>&2 & exit 4" 2>&1' });
+  assert.equal(r.exitCode, 4);
+});
+
+test('strict mode in the command does not break the exit code or add stderr noise', { skip }, async () => {
+  const ok = await runCommand({ command: 'Set-StrictMode -Version Latest; Write-Output ok' });
+  assert.equal(ok.exitCode, 0);
+  assert.equal(ok.stderr.trim(), '');
+  const failed = await runCommand({ command: 'Set-StrictMode -Version Latest; Write-Error "w"' });
+  assert.equal(failed.exitCode, 1);
+});
+
+test('a command ending in a trailing backtick does not swallow the exit-code check', { skip }, async () => {
+  const r = await runCommand({ command: 'Write-Output ok `' });
+  assert.equal(r.stdout.trim(), 'ok');
+  assert.equal(r.exitCode, 0);
+});
+
 test('reports that the command could not be prepared when the temporary folder is missing', { skip }, async () => {
   const missing = path.join(os.tmpdir(), `passclaude-missing-${Date.now()}`);
   assert.equal(fs.existsSync(missing), false);

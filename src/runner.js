@@ -16,9 +16,23 @@ const EXIT_GRACE_MS = 2000;
 // After taskkill, how long to wait for PowerShell to exit before killing it directly.
 const KILL_BACKSTOP_MS = 5000;
 
-// Appended after the user's command. -File exits 0 even when the last statement failed, so this reads $? first and
-// exits non-zero for a failing last statement. A command that calls exit or throws never gets here, which is right.
-const POSTAMBLE = '$passclaudeOk = $?; $passclaudeCode = $LASTEXITCODE\nif (-not $passclaudeOk) { if ($passclaudeCode) { exit $passclaudeCode } else { exit 1 } }';
+// Appended after the user's command, with a blank line between so a trailing backtick in the command cannot join it. -File exits 0
+// even when the last statement failed, so this reads $? first and exits non-zero for a failing last statement. A command that
+// calls exit or throws never gets here, which is right. Details that matter:
+// - Set-StrictMode -Off comes right after $? is read, because under strict mode reading an unset $LASTEXITCODE throws.
+// - In Windows PowerShell 5.1, `native 2>&1` makes $? false whenever the program writes to stderr, even when it exits 0. That
+//   leaves a native stderr record (id NativeCommandError, or NativeCommandErrorMessage for later lines) as the latest error and
+//   $LASTEXITCODE 0 or unset, which counts as success. A non-zero $LASTEXITCODE always wins.
+const POSTAMBLE = [
+  '$passclaudeOk = $?',
+  'Set-StrictMode -Off',
+  '$passclaudeCode = $LASTEXITCODE',
+  "$passclaudeId = if ($Error.Count -gt 0) { $Error[0].FullyQualifiedErrorId } else { '' }",
+  'if (-not $passclaudeOk) {',
+  '  if ($passclaudeCode) { exit $passclaudeCode }',
+  "  elseif ($passclaudeId -ne 'NativeCommandError' -and $passclaudeId -ne 'NativeCommandErrorMessage') { exit 1 }",
+  '}',
+].join('\n');
 
 // Best effort. A file that PowerShell still has open cannot be deleted yet, and nothing depends on it going.
 function removeScript(file) {
@@ -30,7 +44,7 @@ function removeScript(file) {
 }
 
 export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
-  const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}\n${POSTAMBLE}`;
+  const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}\n\n${POSTAMBLE}`;
   return new Promise((resolve, reject) => {
     // A script file, not -EncodedCommand: for encoded commands PowerShell writes stderr as XML (CLIXML), which escapes the text
     // and mixes it with plain lines. The BOM tells Windows PowerShell 5.1 that the file is UTF-8.

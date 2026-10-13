@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src https:; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
+  <title>passClaude</title>
+  <style>
+    :root { --bg: #f7f7f8; --card: #fff; --text: #1d1d1f; --muted: #6e6e73; --accent: #c2410c; --error: #b91c1c; --ok: #15803d; --line: #d2d2d7; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111113; --card: #1c1c1f; --text: #f2f2f3; --muted: #a1a1a6; --accent: #fb923c; --error: #f87171; --ok: #4ade80; --line: #3a3a3f; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width: 440px; margin: 0 auto; padding: 24px 16px 40px; }
+    h1 { font-size: 22px; margin: 0 0 16px; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+    label { display: block; margin: 14px 0 0; font-weight: 600; }
+    input[type=password], input[type=text] { width: 100%; margin-top: 6px; padding: 12px; font-size: 17px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--text); }
+    label.row { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+    button { width: 100%; margin-top: 18px; padding: 14px; font-size: 17px; font-weight: 600; border: 0; border-radius: 10px; background: var(--accent); color: #fff; }
+    button:disabled { opacity: 0.5; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .error { color: var(--error); }
+    .ok { color: var(--ok); font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+    #status { min-height: 1.45em; }
+  </style>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main>
+    <h1>passClaude</h1>
+    <section id="loading"><p>Loading…</p></section>
+    <section id="bad" hidden><p id="problem" class="error"></p></section>
+    <section id="ask" hidden>
+      <p>Claude asked you to save <strong id="name"></strong>: <span id="what"></span>.</p>
+      <form id="form" autocomplete="off">
+        <label>Secret
+          <input id="value" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label>Type it again
+          <input id="confirm" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+        </label>
+        <label class="row"><input id="show" type="checkbox"> Show what I typed</label>
+        <button id="send" type="submit">Encrypt &amp; send to my PC</button>
+      </form>
+      <p id="status" role="status"></p>
+      <p id="expires" class="muted"></p>
+    </section>
+    <section id="done" hidden>
+      <p class="ok">Saved ✓</p>
+      <p>Claude can use it now without ever seeing it. You can close this page.</p>
+    </section>
+    <p class="muted">Your secret is encrypted on this phone before it is sent. The relay and Claude only ever see scrambled data. This link works once.</p>
+  </main>
+</body>
+</html>

@@ -9,6 +9,12 @@ const REASONS = {
   INTERRUPTED: 'Another window took focus while typing. The password box may be partly filled: clear it and try again.',
 };
 
+// Address-bar text can hold anything the user typed, so refusals only ever name real-looking web hosts.
+function describeWindow(url) {
+  const host = hostOf(url);
+  return host && (host.includes('.') || host === 'localhost') ? host : 'a non-web page';
+}
+
 export async function typeSecret({ name, vault, win }) {
   const meta = await vault.meta(name);
   if (!meta) return { ok: false, reason: `No secret named "${name}".` };
@@ -23,11 +29,11 @@ export async function typeSecret({ name, vault, win }) {
     if (matching.length > 1) {
       return { ok: false, reason: `Several Chrome windows are on ${meta.site}. Bring the right one to the front or close the others, then try again.` };
     }
-    const shown = [...new Set(windows.map((w) => hostOf(w.url) ?? w.url))].join(', ');
+    const shown = [...new Set(windows.map((w) => describeWindow(w.url)))].join(', ');
     return { ok: false, reason: `Site lock: "${name}" is locked to ${meta.site}, but Chrome is showing ${shown}. Nothing was typed.` };
   }
 
   const result = await win.typeInto(name, target.hwnd, target.url);
   if (result === 'TYPED') return { ok: true };
-  return { ok: false, reason: REASONS[result] ?? `Typing failed (${result}). Nothing was typed.` };
+  return { ok: false, reason: REASONS[result] ?? `Typing failed (${result}). The password box may be partly filled: clear it and try again.` };
 }

@@ -9,7 +9,13 @@ export function createWinOps({ run = runPs } = {}) {
       if (res.code !== EXIT.OK) throw new Error(`Couldn't inspect Chrome windows (exit code ${res.code}).`);
       const out = res.stdout.trim();
       if (!out) return [];
-      const parsed = JSON.parse(out);
+      let parsed;
+      try {
+        parsed = JSON.parse(out);
+      } catch {
+        // A JSON parse error would quote the script's output, so it is never passed on.
+        throw new Error("Couldn't read the Chrome window list.");
+      }
       return Array.isArray(parsed) ? parsed : [parsed];
     },
 

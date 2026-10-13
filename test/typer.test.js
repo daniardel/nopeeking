@@ -74,5 +74,28 @@ test('explains each refusal from the typing script', async () => {
     const r = await typeSecret({ name: 'netflix', vault, win });
     assert.equal(r.ok, false);
     assert.match(r.reason, pattern);
+    if (code === 'WEIRD') {
+      assert.doesNotMatch(r.reason, /Nothing was typed/);
+      assert.match(r.reason, /partly filled/);
+    }
   }
+});
+
+test('the site lock refusal never echoes address-bar text, only web hosts or "a non-web page"', async () => {
+  const { vault, win, typed } = await setup([
+    { hwnd: '1', url: 'my pin 1234', foreground: true },
+    { hwnd: '2', url: 'hunter2', foreground: false },
+    { hwnd: '3', url: 'file:///C:/Users/x/secret.txt', foreground: false },
+    { hwnd: '4', url: 'https://user:pw@netflix.com/', foreground: false },
+    { hwnd: '5', url: 'chrome://settings/passwords', foreground: false },
+    { hwnd: '6', url: 'netflix.com.evil.ru/login', foreground: false },
+    { hwnd: '7', url: 'localhost:8765/login.html', foreground: false },
+  ]);
+  const r = await typeSecret({ name: 'netflix', vault, win });
+  assert.equal(r.ok, false);
+  assert.equal(r.reason, 'Site lock: "netflix" is locked to netflix.com, but Chrome is showing a non-web page, netflix.com.evil.ru, localhost. Nothing was typed.');
+  for (const leaked of ['my pin 1234', 'pin 1234', 'hunter2', 'file:', 'secret.txt', 'user:pw', 'chrome://', 'settings/passwords']) {
+    assert.ok(!r.reason.includes(leaked), `reason leaks "${leaked}": ${r.reason}`);
+  }
+  assert.equal(typed.length, 0);
 });

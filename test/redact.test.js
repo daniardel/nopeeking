@@ -121,6 +121,10 @@ test('redact masks a value that a table cuts off with ...', () => {
   assert.equal(redact(narrow, [{ name: 'pw', value: 'Hunt3r-2-pass' }]), '0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345 ••••(pw)...');
 });
 
+test('redact masks short ends next to a one-character ellipsis too', () => {
+  assert.equal(redact('(token ghp_A1…5p6Q7r8)', SHAPE_SECRETS), '(token ••••(gh)…••••(gh))');
+});
+
 test('redact masks a value that a warning wraps across lines', () => {
   const text = 'WARNING: tok \r\neyJhbGciOiJIUzI1NiJ9.QWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfgh\r\njklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNMQWERTYuiop1234567890asdfghjklZXCVBNM.sigSIGsig\n';
   const out = redact(text, SHAPE_SECRETS);

@@ -58,3 +58,19 @@ test('ignores a powershell.exe planted in the current directory', { skip }, asyn
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('decodes PowerShell error text so a secret with & < > appears as typed', { skip }, async () => {
+  const r = await runCommand({ command: 'throw "failed with $env:PC_S"', env: { PC_S: 'p&ss<w>rd"1\'x' } });
+  assert.ok(r.stderr.includes('p&ss<w>rd"1\'x'), `stderr was: ${r.stderr}`);
+  assert.ok(!r.stderr.includes('&amp;'));
+  assert.ok(!r.stderr.includes('#< CLIXML'));
+});
+
+test('returns promptly when a grandchild keeps the output pipes open after PowerShell exits', { skip }, async () => {
+  const started = Date.now();
+  // Start-Process hands ping.exe our stdout pipe and PowerShell exits at once; ping then exits on its own after about 30 seconds.
+  const r = await runCommand({ command: "Start-Process -NoNewWindow ping.exe -ArgumentList '-n','30','127.0.0.1' | Out-Null; Write-Output started", timeoutSec: 20 });
+  assert.equal(r.timedOut, false);
+  assert.match(r.stdout, /started/);
+  assert.ok(Date.now() - started < 15_000);
+});

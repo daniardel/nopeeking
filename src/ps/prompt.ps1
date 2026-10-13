@@ -79,6 +79,7 @@ $form.Add_Shown({ [PassClaude.Show]::Window($form.Handle); $form.Activate(); $bo
 $result = $form.ShowDialog()
 $timer.Stop()
 if ($result -ne [System.Windows.Forms.DialogResult]::OK) { exit 6 }
+if ([PassClaude.Cred]::Exists($target)) { exit 4 }  # saved elsewhere while the dialog was open: never overwrite
 [PassClaude.Cred]::Write($target, $box1.Text, [string]$req.comment)
 $box1.Text = ''
 $box2.Text = ''

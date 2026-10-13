@@ -63,3 +63,22 @@ test('promptPut saves what the popup returns and reports cancel', async () => {
   assert.equal(await cancelled.promptPut('netflix', meta), 'cancelled');
   assert.equal(await cancelled.meta('netflix'), null);
 });
+
+test('promptPut runs prompt.ps1 with the name only, a 6 minute timeout, and kind/site over stdin', async () => {
+  const fake = fakeWindowsCred({ popupValue: 'typed-in-popup' });
+  const calls = [];
+  const vault = createVault({ run: (s, a, i, o) => { calls.push({ s, a, i, o }); return fake.run(s, a, i, o); } });
+  await vault.promptPut('netflix', meta);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].s, 'prompt.ps1');
+  assert.deepEqual(calls[0].a, ['netflix']);
+  assert.equal(calls[0].o.timeoutMs, 360000);
+  const stdin = JSON.parse(calls[0].i);
+  assert.equal(stdin.kind, 'web');
+  assert.equal(stdin.site, 'netflix.com');
+  assert.deepEqual(JSON.parse(stdin.comment), { v: 1, ...meta });
+  const cmdCalls = [];
+  const cmdVault = createVault({ run: (s, a, i, o) => { cmdCalls.push({ i }); return fake.run(s, a, i, o); } });
+  await cmdVault.promptPut('gh-token', { kind: 'command', created: meta.created });
+  assert.deepEqual({ ...JSON.parse(cmdCalls[0].i), comment: undefined }, { kind: 'command', site: '', comment: undefined });
+});

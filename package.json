@@ -1,0 +1,43 @@
+{
+  "name": "passclaude",
+  "version": "0.1.0",
+  "description": "Let Claude Code log into websites and use your API keys without ever seeing them.",
+  "type": "module",
+  "bin": {
+    "passclaude": "src/cli.js"
+  },
+  "files": [
+    "src",
+    "hook",
+    "docs/e2e.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "win32"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "mcp-server",
+    "password",
+    "secrets",
+    "ai-agents",
+    "remote-control"
+  ],
+  "license": "MIT",
+  "passclaude": {
+    "pageUrl": ""
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  }
+}

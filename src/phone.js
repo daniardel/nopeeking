@@ -6,8 +6,11 @@ export const LINK_TTL_MS = 5 * 60_000;
 /** How long start() waits for the relay connection to open before telling the user to use the PC popup instead. */
 export const RELAY_OPEN_WAIT_MS = 8000;
 
-/** How long close() waits for messages still being saved or acknowledged, before giving up on them. */
-export const CLOSE_ACK_WAIT_MS = 3000;
+/**
+ * How long close() waits for messages still being saved or acknowledged, before giving up on them. With CLOSE_DRAIN_MS it
+ * stays well under the 2 seconds the MCP client waits after closing stdin before it kills the server.
+ */
+export const CLOSE_ACK_WAIT_MS = 1500;
 
 /** Pause after the wait, so aborted relay connections can finish closing before the caller exits (see close()). */
 export const CLOSE_DRAIN_MS = 200;

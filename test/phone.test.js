@@ -260,7 +260,8 @@ test('close waits for a slow ack to be published before it resolves', async () =
   await phone.close();
   const waited = Date.now() - started;
   assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
-  assert.ok(waited < CLOSE_ACK_WAIT_MS - 500, `close waited ${waited} ms: it should not sit out the cap`);
+  // A close that sits out the cap takes at least CLOSE_ACK_WAIT_MS + CLOSE_DRAIN_MS.
+  assert.ok(waited < CLOSE_ACK_WAIT_MS, `close waited ${waited} ms: it should not sit out the cap`);
   const { key, req } = await sent;
   assert.deepEqual(await acks(ntfy, key, req), [{ ok: true }]);
 });
@@ -280,6 +281,22 @@ test('close stops waiting for a hung ack at the wait cap, then drains', async ()
   );
 });
 
+// The MCP SDK's stdio client (client/stdio.js) closes the server's stdin, waits 2 seconds, then sends SIGTERM.
+const CLIENT_KILLS_AFTER_MS = 2000;
+
+test('close is done before the MCP client gives up on the server, even with a hung ack', async () => {
+  assert.ok(CLOSE_ACK_WAIT_MS + CLOSE_DRAIN_MS <= CLIENT_KILLS_AFTER_MS - 250, 'no time left for the rest of shutdown');
+  const ntfy = hungAcks(fakeNtfy());
+  const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  phoneSends(link, ntfy, 'hung-ack-value'); // never settles: the ack it waits for is never published
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  const started = Date.now();
+  await phone.close();
+  const waited = Date.now() - started;
+  assert.ok(waited < CLIENT_KILLS_AFTER_MS, `close waited ${waited} ms`);
+});
+
 test('close waits for a save that is already running, then for its ack', async () => {
   const vault = memoryVault();
   const put = vault.put;
@@ -296,7 +313,8 @@ test('close waits for a save that is already running, then for its ack', async (
   const waited = Date.now() - started;
   assert.equal(await vault.get('gh'), 'busy-save-value');
   assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
-  assert.ok(waited < CLOSE_ACK_WAIT_MS - 500, `close waited ${waited} ms: it should not sit out the cap`);
+  // A close that sits out the cap takes at least CLOSE_ACK_WAIT_MS + CLOSE_DRAIN_MS.
+  assert.ok(waited < CLOSE_ACK_WAIT_MS, `close waited ${waited} ms: it should not sit out the cap`);
   await sent;
 });
 

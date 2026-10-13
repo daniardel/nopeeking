@@ -5,7 +5,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { addGuardHook, guardCommand, installGuard, MATCHER } from '../src/install-guard.js';
 
-const tempHome = () => fs.mkdtempSync(path.join(os.tmpdir(), 'pc-home-'));
+/** A fresh home folder for one test, removed again when the test ends. */
+function tempHome(t) {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'pc-home-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  return home;
+}
 const quiet = () => {};
 
 test('addGuardHook adds one entry and keeps everything else', () => {
@@ -20,14 +25,14 @@ test('addGuardHook adds one entry and keeps everything else', () => {
   assert.equal(addGuardHook(undefined, 'x').settings.hooks.PreToolUse.length, 1);
 });
 
-test('installGuard asks first and changes nothing on no', async () => {
-  const home = tempHome();
+test('installGuard asks first and changes nothing on no', async (t) => {
+  const home = tempHome(t);
   assert.equal(await installGuard({ home, ask: async () => false, log: quiet }), 0);
   assert.equal(fs.existsSync(path.join(home, '.claude')), false);
 });
 
-test('installGuard copies the guard, backs up settings and registers the hook on yes', async () => {
-  const home = tempHome();
+test('installGuard copies the guard, backs up settings and registers the hook on yes', async (t) => {
+  const home = tempHome(t);
   const dir = path.join(home, '.claude');
   fs.mkdirSync(dir);
   fs.writeFileSync(path.join(dir, 'settings.json'), '\uFEFF{"model":"opus"}');
@@ -46,16 +51,16 @@ test('installGuard copies the guard, backs up settings and registers the hook on
   assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8')).hooks.PreToolUse.length, 1);
 });
 
-test('installGuard refuses to touch settings it cannot read', async () => {
-  const home = tempHome();
+test('installGuard refuses to touch settings it cannot read', async (t) => {
+  const home = tempHome(t);
   fs.mkdirSync(path.join(home, '.claude'));
   fs.writeFileSync(path.join(home, '.claude', 'settings.json'), '{ broken');
   assert.equal(await installGuard({ home, ask: async () => true, log: quiet }), 1);
   assert.equal(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'), '{ broken');
 });
 
-test('installGuard restores the guard file when only its passclaude folder was deleted', async () => {
-  const home = tempHome();
+test('installGuard restores the guard file when only its passclaude folder was deleted', async (t) => {
+  const home = tempHome(t);
   const dir = path.join(home, '.claude');
   fs.mkdirSync(dir);
   const guardPath = path.join(dir, 'passclaude', 'guard.cjs');

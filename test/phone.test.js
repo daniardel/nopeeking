@@ -288,3 +288,13 @@ test('close waits for a save that is already running, then for its ack', async (
   assert.ok(ackPublished(ntfy), 'close resolved before the ack was published');
   await sent;
 });
+
+// ---- Follow-up 2: exiting right after an aborted relay connection can crash on Windows, so close() drains first ----
+
+test('close resolves only after a short drain, even with nothing in flight', async () => {
+  const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: PAGE });
+  const started = Date.now();
+  await phone.close();
+  const waited = Date.now() - started;
+  assert.ok(waited >= 190, `close resolved after ${waited} ms`);
+});

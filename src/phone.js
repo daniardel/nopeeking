@@ -6,6 +6,9 @@ export const LINK_TTL_MS = 5 * 60_000;
 /** How long close() waits for messages still being saved or acknowledged, before giving up on them. */
 export const CLOSE_ACK_WAIT_MS = 3000;
 
+/** Pause after the wait, so aborted relay connections can finish closing before the caller exits (see close()). */
+export const CLOSE_DRAIN_MS = 200;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Resolves once every promise has settled, or after `ms`. The timer is cleared as soon as either happens. */
@@ -157,10 +160,15 @@ export function createPhone({ vault, ntfy, pageUrl, now = Date.now, ttlMs = LINK
       });
     },
 
-    /** Ends every waiting link. Resolves once messages already being saved have been acknowledged (or after CLOSE_ACK_WAIT_MS). */
+    /**
+     * Ends every waiting link (which aborts its relay connection). Resolves once messages already being saved have been
+     * acknowledged (or after CLOSE_ACK_WAIT_MS), then after CLOSE_DRAIN_MS. The drain is needed because on Windows,
+     * calling process.exit() right after a streaming fetch is aborted trips a libuv assertion (src\win\async.c) and the
+     * process dies with exit code 127. Callers that exit afterwards must await close() first.
+     */
     close() {
       for (const req of pending.values()) expire(req);
-      return settledWithin([...inFlight], CLOSE_ACK_WAIT_MS);
+      return settledWithin([...inFlight], CLOSE_ACK_WAIT_MS).then(() => sleep(CLOSE_DRAIN_MS));
     },
   };
 }

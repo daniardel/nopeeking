@@ -59,11 +59,37 @@ test('ignores a powershell.exe planted in the current directory', { skip }, asyn
   }
 });
 
-test('decodes PowerShell error text so a secret with & < > appears as typed', { skip }, async () => {
+test('a thrown secret with & < > appears as typed, not XML-escaped', { skip }, async () => {
   const r = await runCommand({ command: 'throw "failed with $env:PC_S"', env: { PC_S: 'p&ss<w>rd"1\'x' } });
   assert.ok(r.stderr.includes('p&ss<w>rd"1\'x'), `stderr was: ${r.stderr}`);
   assert.ok(!r.stderr.includes('&amp;'));
   assert.ok(!r.stderr.includes('#< CLIXML'));
+});
+
+test('keeps plain stderr lines and a thrown secret as plain text when they are mixed', { skip }, async () => {
+  const r = await runCommand({ command: 'cmd /c "echo nat 1>&2"; [Console]::Error.WriteLine("plain-line"); throw "boom $env:PC_S"', env: { PC_S: 'p&q<x>' } });
+  assert.match(r.stderr, /nat/, `stderr was: ${r.stderr}`);
+  assert.match(r.stderr, /plain-line/, `stderr was: ${r.stderr}`);
+  assert.ok(r.stderr.includes('p&q<x>'), `stderr was: ${r.stderr}`);
+  assert.ok(!r.stderr.includes('&amp;'));
+  assert.ok(!r.stderr.includes('#< CLIXML'));
+});
+
+test('passes non-ASCII command text through unchanged', { skip }, async () => {
+  const r = await runCommand({ command: 'Write-Output "ü✓"' });
+  assert.equal(r.exitCode, 0);
+  assert.match(r.stdout, /ü✓/);
+});
+
+test('runs from a temporary script file and removes it afterwards', { skip }, async () => {
+  const countScripts = () => fs.readdirSync(os.tmpdir()).filter((f) => /^passclaude-.*\.ps1$/.test(f)).length;
+  const before = countScripts();
+  // $PSCommandPath is the script the command runs from, so this shows where the command came from.
+  const r = await runCommand({ command: 'Write-Output $PSCommandPath' });
+  const scriptPath = r.stdout.trim();
+  assert.match(path.basename(scriptPath), /^passclaude-.*\.ps1$/, `stdout was: ${r.stdout}`);
+  assert.equal(fs.existsSync(scriptPath), false);
+  assert.ok(countScripts() <= before, 'a temporary script file was left behind');
 });
 
 test('returns promptly when a grandchild keeps the output pipes open after PowerShell exits', { skip }, async () => {

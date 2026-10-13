@@ -1,6 +1,9 @@
 // Runs a Windows PowerShell command with secrets added as environment variables.
 // Returns raw output; the caller redacts it before it reaches Claude.
 import { spawn, execFile } from 'node:child_process';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { POWERSHELL_EXE } from './windows.js';
 
@@ -13,44 +16,40 @@ const EXIT_GRACE_MS = 2000;
 // After taskkill, how long to wait for PowerShell to exit before killing it directly.
 const KILL_BACKSTOP_MS = 5000;
 
-const CLIXML_START = /^\s*#< CLIXML/;
-// Text of a stream record, <S S="Error">...</S>. Other elements (progress records, <S N="..."> properties) are skipped.
-// The $ alternative takes a record cut off by the output cap.
-const CLIXML_RECORD = /<S\s+S="[^"]*">([\s\S]*?)(?:<\/S>|$)/g;
-const XML_ENTITY = /&(amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
-const XML_NAMED = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
-const PS_ESCAPE = /_x([0-9a-fA-F]{4})_/g;
-
-// Windows PowerShell writes stderr as CLIXML (XML-escaped, with _xHHHH_ escapes) when it has errors to report.
-// Returns the plain text. Text that is not CLIXML passes through unchanged.
-export function decodeCliXml(text) {
-  if (!CLIXML_START.test(text)) return text;
-  const pieces = [];
-  for (const [, body] of text.matchAll(CLIXML_RECORD)) {
-    // A raw "<" never occurs in text content, so a "<" and everything after it is a tag cut off by the cap.
-    const visible = body.replace(/<[^>]*$/, '');
-    pieces.push(unescapeXml(visible).replace(PS_ESCAPE, (_, hex) => String.fromCharCode(parseInt(hex, 16))));
+// Best effort. A file that PowerShell still has open cannot be deleted yet, and nothing depends on it going.
+function removeScript(file) {
+  try {
+    fs.rmSync(file, { force: true });
+  } catch {
+    // ignored
   }
-  return pieces.join('');
-}
-
-// One pass, so "&amp;lt;" becomes "&lt;" and not "<".
-function unescapeXml(text) {
-  return text.replace(XML_ENTITY, (match, name) => {
-    if (name in XML_NAMED) return XML_NAMED[name];
-    const code = name[1] === 'x' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
-    return code <= 0x10ffff ? String.fromCodePoint(code) : match;
-  });
 }
 
 export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
   const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}`;
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      POWERSHELL_EXE,
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')],
-      { cwd, env: { ...process.env, ...env }, windowsHide: true },
-    );
+    // A script file, not -EncodedCommand: for encoded commands PowerShell writes stderr as XML (CLIXML), which escapes the text
+    // and mixes it with plain lines. The BOM tells Windows PowerShell 5.1 that the file is UTF-8.
+    const scriptPath = path.join(os.tmpdir(), `passclaude-${crypto.randomUUID()}.ps1`);
+    try {
+      fs.writeFileSync(scriptPath, `\uFEFF${script}`, 'utf8');
+    } catch {
+      removeScript(scriptPath);
+      reject(new Error("Couldn't prepare the command."));
+      return;
+    }
+    let child;
+    try {
+      child = spawn(
+        POWERSHELL_EXE,
+        ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath],
+        { cwd, env: { ...process.env, ...env }, windowsHide: true },
+      );
+    } catch (e) {
+      removeScript(scriptPath);
+      reject(e);
+      return;
+    }
     const chunks = { stdout: [], stderr: [] };
     const sizes = { stdout: 0, stderr: 0 };
     const truncated = { stdout: false, stderr: false };
@@ -64,6 +63,10 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
         sizes[key] += part.length;
       });
     }
+    const dropPipes = () => {
+      child.stdout.destroy();
+      child.stderr.destroy();
+    };
     let timedOut = false;
     let exitCode = null;
     let settled = false;
@@ -71,13 +74,14 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
     let graceTimer = null;
     let backstopTimer = null;
 
-    // Settles the promise once and clears every timer.
+    // Settles the promise once, clears every timer and deletes the script file.
     const settle = (action) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       clearTimeout(graceTimer);
       clearTimeout(backstopTimer);
+      removeScript(scriptPath);
       action();
     };
     const finish = (code) =>
@@ -86,7 +90,7 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
           exitCode: code,
           timedOut,
           stdout: Buffer.concat(chunks.stdout).toString('utf8'),
-          stderr: decodeCliXml(Buffer.concat(chunks.stderr).toString('utf8')),
+          stderr: Buffer.concat(chunks.stderr).toString('utf8'),
           truncated,
         }),
       );
@@ -96,6 +100,7 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
       if (child.exitCode !== null || child.signalCode !== null) return;
       execFile(TASKKILL_EXE, ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true }, () => {});
       backstopTimer = setTimeout(() => {
+        dropPipes();
         child.kill();
         finish(exitCode);
       }, KILL_BACKSTOP_MS);
@@ -106,8 +111,7 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
       clearTimeout(timer);
       clearTimeout(backstopTimer);
       graceTimer = setTimeout(() => {
-        child.stdout.destroy();
-        child.stderr.destroy();
+        dropPipes();
         finish(exitCode);
       }, EXIT_GRACE_MS);
     });

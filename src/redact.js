@@ -18,9 +18,8 @@ export function encodedForms(value) {
   return [...new Set(forms)].filter((form) => form.length >= MIN_SECRET_LENGTH);
 }
 
-/** secrets: [{ name, value }] */
-export function redact(text, secrets) {
-  const str = String(text);
+/** Sorted, non-overlapping [start, end) spans of every secret occurrence in str, each with its name. */
+function mergedSpans(str, secrets) {
   // Find every occurrence of every form, including overlapping ones.
   const spans = [];
   for (const { name, value } of secrets) {
@@ -38,19 +37,38 @@ export function redact(text, secrets) {
     if (last && span.start < last.end) last.end = Math.max(last.end, span.end);
     else merged.push(span);
   }
+  return merged;
+}
+
+/** Writes str with each span replaced by its mask. */
+function maskSpans(str, spans) {
   let out = '';
   let pos = 0;
-  for (const { start, end, name } of merged) {
+  for (const { start, end, name } of spans) {
     out += str.slice(pos, start) + `••••(${name})`;
     pos = end;
   }
   return out + str.slice(pos);
 }
 
-/** Like redact, but when output was cut off, drops the tail where half a secret could sit (after redacting). */
+/** secrets: [{ name, value }] */
+export function redact(text, secrets) {
+  const str = String(text);
+  return maskSpans(str, mergedSpans(str, secrets));
+}
+
+/**
+ * Like redact, but when output was cut off, drops the tail where half a secret could sit.
+ * The cut is made in raw-text positions, so a mask is never cut in half.
+ */
 export function redactOutput(text, secrets, { truncated = false } = {}) {
-  const out = redact(String(text), secrets);
-  if (!truncated) return out;
+  const str = String(text);
+  const spans = mergedSpans(str, secrets);
+  if (!truncated) return maskSpans(str, spans);
   const longest = Math.max(0, ...secrets.flatMap(({ value }) => encodedForms(value).map((f) => f.length)));
-  return out.slice(0, Math.max(0, out.length - longest));
+  let cut = Math.max(0, str.length - longest);
+  // A span that straddles the cut is dropped whole, so no part of it is shown.
+  const straddling = spans.find(({ start, end }) => start < cut && cut < end);
+  if (straddling) cut = straddling.start;
+  return maskSpans(str.slice(0, cut), spans.filter(({ end }) => end <= cut));
 }

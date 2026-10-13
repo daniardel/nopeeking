@@ -34,11 +34,21 @@ test('redactOutput drops a secret cut in half at the end of truncated output', (
   assert.equal(redactOutput('a SUPERSECRET b', secrets), 'a ••••(k) b');
 });
 
-test('redactOutput masks a secret that straddles the cut before trimming', () => {
+test('redactOutput drops a secret that straddles the cut', () => {
   const secrets = [{ name: 'k', value: 'SUPERSECRET' }];
   const out = redactOutput(`${'x'.repeat(80)}SUPERSECRET${'y'.repeat(20)}`, secrets, { truncated: true });
-  // The cut lands inside the mask: no fragment of the secret (such as 'SUPERSECR') survives.
-  assert.equal(out, `${'x'.repeat(80)}••••(`);
+  // The cut would land inside the mask, so the whole secret is dropped: no fragment survives.
+  assert.equal(out, 'x'.repeat(80));
+});
+
+test('redactOutput never shows a secret prefix when a long mask sits near the cut', () => {
+  const secrets = [
+    { name: 'A', value: 'prefix_abcd1234' },
+    { name: 'production_database_password_for_prod_eu1', value: 'abcd' }, // 41-character name
+  ];
+  const out = redactOutput(`${'z'.repeat(50)}prefix_abcd12`, secrets, { truncated: true });
+  assert.ok(!out.includes('prefix_'), out);
+  assert.equal(out, 'z'.repeat(33)); // no partial mask either
 });
 
 test('redact masks overlapping occurrences of one secret as a single mask', () => {

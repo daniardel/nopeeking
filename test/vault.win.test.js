@@ -1,10 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createVault } from '../src/vault.js';
+import { POWERSHELL_EXE } from '../src/windows.js';
 
 const skip = process.platform !== 'win32';
 const name = `zz-test-${process.pid}-${Date.now()}`;
 const value = 'Pässwörd "quoted" $x `tick ✓ 🔑';
+
+test('the system Windows PowerShell exists at the pinned absolute path', { skip }, () => {
+  assert.ok(fs.existsSync(POWERSHELL_EXE));
+});
 
 test('real Credential Manager round trip with special characters', { skip }, async () => {
   const vault = createVault();

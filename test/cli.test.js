@@ -15,8 +15,12 @@ test('passclaude help prints the install command', { skip }, () => {
 
 test('passclaude with no arguments speaks MCP over stdio and nothing else', { skip }, async () => {
   const client = new Client({ name: 'smoke', version: '1.0.0' });
+  // The client does not throw on a line of stdout that is not MCP: it reports it here and carries on.
+  const errors = [];
+  client.onerror = (e) => errors.push(e);
   await client.connect(new StdioClientTransport({ command: process.execPath, args: [CLI] }));
   const { tools } = await client.listTools();
   assert.equal(tools.length, 7);
   await client.close();
+  assert.deepEqual(errors.map(String), [], 'the server wrote something other than MCP messages to stdout');
 });

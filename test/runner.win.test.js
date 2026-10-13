@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
-import { runCommand, OUTPUT_CAP } from '../src/runner.js';
+import { runCommand, stopAll, OUTPUT_CAP } from '../src/runner.js';
 
 const skip = process.platform !== 'win32';
 
@@ -170,4 +170,31 @@ test('returns promptly when a grandchild keeps the output pipes open after Power
   assert.equal(r.timedOut, false);
   assert.match(r.stdout, /started/);
   assert.ok(Date.now() - started < 15_000);
+});
+
+test('stopAll stops a running command and removes its script file', { skip }, async () => {
+  // The command writes the path of its own script file to a marker, so the test knows which file to look for.
+  const marker = path.join(os.tmpdir(), `passclaude-marker-${process.pid}-${Date.now()}.txt`);
+  const started = Date.now();
+  const pending = runCommand({ command: `Set-Content -LiteralPath '${marker}' -Value $PSCommandPath; Start-Sleep -Seconds 30`, timeoutSec: 60 });
+  try {
+    while (!fs.existsSync(marker) || !fs.readFileSync(marker, 'utf8').trim()) {
+      assert.ok(Date.now() - started < 15_000, 'the command never started');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const scriptPath = fs.readFileSync(marker, 'utf8').trim();
+    assert.match(path.basename(scriptPath), /^passclaude-.*\.ps1$/);
+    stopAll();
+    const r = await pending;
+    assert.ok(Date.now() - started < 10_000, 'the command was not stopped');
+    assert.equal(r.timedOut, false);
+    assert.equal(fs.existsSync(scriptPath), false, 'the script file was left behind');
+  } finally {
+    stopAll();
+    fs.rmSync(marker, { force: true });
+  }
+});
+
+test('stopAll with nothing running does nothing', { skip }, () => {
+  assert.doesNotThrow(() => stopAll());
 });

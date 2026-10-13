@@ -181,3 +181,32 @@ test('no tool output or error ever contains a stored value', async () => {
     for (const s of secrets) assert.ok(!out.includes(s), `leaked in: ${out}`);
   }
 });
+
+test('run_with_secret never passes on a start-up error, because Node can quote a stored value in it', async () => {
+  // Node's own spawn error for an env value with a null byte quotes the whole value.
+  const run = async (opts) => {
+    throw new Error(`The property 'options.env['T']' must be a string without null bytes. Received '${opts.env.T}'`);
+  };
+  const { tools } = await setup({ run });
+  let error;
+  try {
+    await tools.run_with_secret({ command: 'x', env: { T: 'github' } });
+  } catch (e) {
+    error = e;
+  }
+  assert.ok(error, 'expected run_with_secret to reject');
+  assert.equal(error.message, "Couldn't start the command. Nothing ran.");
+  assert.equal(error.cause, undefined);
+  const everything = `${error.message}\n${error.stack}`;
+  for (const form of [CMD, Buffer.from(CMD).toString('base64'), encodeURIComponent(CMD)]) {
+    assert.ok(!everything.includes(form), `leaked in: ${everything}`);
+  }
+});
+
+test('check_phone_secret waits 50 seconds by default, under the MCP client request timeout of 60 seconds', async () => {
+  const waits = [];
+  const phone = { check: async (name, ms) => { waits.push(ms); return 'saved'; } };
+  const tools = createHandlers({ vault: memoryVault(), win: null, phone, runCommand: null });
+  await tools.check_phone_secret({ name: 'hulu' });
+  assert.deepEqual(waits, [50_000]);
+});

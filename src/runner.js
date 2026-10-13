@@ -1,6 +1,6 @@
 // Runs a Windows PowerShell command with secrets added as environment variables.
 // Returns raw output; the caller redacts it before it reaches Claude.
-import { spawn, execFile } from 'node:child_process';
+import { spawn, execFile, execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -43,6 +43,29 @@ function removeScript(file) {
   }
 }
 
+// Commands that are running right now: { child, scriptPath }. A run leaves the set when it settles.
+const live = new Set();
+
+/**
+ * Stops every running command and removes its script file, all synchronously, because the server calls this just before it exits.
+ * On Windows a child outlives its parent, so without this a command would keep running with its secrets in its environment,
+ * with no timeout, and leave its script file behind. Errors are ignored: this is a last-moment cleanup.
+ */
+export function stopAll() {
+  const runs = [...live];
+  for (const { child } of runs) {
+    // A child that has already exited may have had its process id reused, so it is left alone.
+    if (child.exitCode !== null || child.signalCode !== null) continue;
+    try {
+      execFileSync(TASKKILL_EXE, ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: KILL_BACKSTOP_MS });
+    } catch {
+      // ignored
+    }
+  }
+  // The script files go after every process has been killed, so none of them is still held open.
+  for (const { scriptPath } of runs) removeScript(scriptPath);
+}
+
 export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
   const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}\n\n${POSTAMBLE}`;
   return new Promise((resolve, reject) => {
@@ -68,6 +91,8 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
       reject(e);
       return;
     }
+    const run = { child, scriptPath };
+    live.add(run);
     const chunks = { stdout: [], stderr: [] };
     const sizes = { stdout: 0, stderr: 0 };
     const truncated = { stdout: false, stderr: false };
@@ -96,6 +121,7 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
     const settle = (action) => {
       if (settled) return;
       settled = true;
+      live.delete(run);
       clearTimeout(timer);
       clearTimeout(graceTimer);
       clearTimeout(backstopTimer);

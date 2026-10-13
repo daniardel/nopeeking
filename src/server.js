@@ -8,7 +8,7 @@ import { createVault } from './vault.js';
 import { createWinOps } from './winops.js';
 import { createNtfy } from './ntfy.js';
 import { createPhone } from './phone.js';
-import { runCommand } from './runner.js';
+import { runCommand, stopAll } from './runner.js';
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
@@ -41,7 +41,7 @@ const TOOLS = {
     inputSchema: newSecret,
   },
   check_phone_secret: {
-    description: 'Wait up to 60 seconds for the secret the user is sending from their phone link. Call again while it says it is still waiting.',
+    description: 'Wait up to 50 seconds for the secret the user is sending from their phone link. Call again while it says it is still waiting.',
     inputSchema: { name: secretName },
     annotations: { readOnlyHint: true },
   },
@@ -95,6 +95,8 @@ export async function startServer() {
   const deps = createDeps();
   const server = createServer(deps);
   process.stdin.on('end', () => {
+    // On Windows a child outlives its parent: stop any running command first, so it does not keep its secrets or its script file.
+    stopAll();
     deps.phone.close();
     process.exit(0);
   });

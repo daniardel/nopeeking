@@ -25,6 +25,16 @@ test('put refuses duplicates, too-short and too-long values with clear errors', 
   await assert.rejects(vault.put('y', meta, 'a'.repeat(1281)), { code: 'TOO_LONG' });
 });
 
+test('put refuses a value with a null character before anything reaches PowerShell', async () => {
+  let ran = false;
+  const vault = createVault({ run: async () => { ran = true; return { code: 0, stdout: '', stderr: '' }; } });
+  await assert.rejects(
+    vault.put('x', meta, 'ghp_REALVALUE\u0000tail'),
+    (e) => e.code === 'BAD_VALUE' && e.message === "Secrets can't contain a null character.",
+  );
+  assert.equal(ran, false);
+});
+
 test('missing secrets read as null and delete reports false', async () => {
   const vault = createVault({ run: fakeWindowsCred().run });
   assert.equal(await vault.meta('nope'), null);

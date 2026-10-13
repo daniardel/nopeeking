@@ -75,6 +75,8 @@ export function createVault({ run = runPs } = {}) {
         throw new VaultError('TOO_SHORT', `Too short: secrets need at least ${MIN_SECRET_LENGTH} characters.`);
       }
       if (value.length > MAX_SECRET_CHARS) throw tooLong();
+      // Node refuses to start a process whose environment holds a null character, and its error quotes the whole value.
+      if (value.includes('\u0000')) throw new VaultError('BAD_VALUE', "Secrets can't contain a null character.");
       const res = await run('cred.ps1', ['put', name], JSON.stringify({ comment: encodeMeta(meta), value }));
       if (res.code === EXIT.EXISTS) throw exists(name);
       if (res.code === EXIT.TOO_LONG) throw tooLong();

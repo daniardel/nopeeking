@@ -17,7 +17,7 @@ function isFolder(p) {
   }
 }
 
-export function createHandlers({ vault, win, phone, runCommand, now = Date.now, checkWaitMs = 60_000 }) {
+export function createHandlers({ vault, win, phone, runCommand, now = Date.now, checkWaitMs = 50_000 }) {
   async function notFound(name) {
     const names = (await vault.list()).map((s) => s.name);
     return new Error(`No secret named "${name}". ${names.length ? `Saved: ${names.join(', ')}.` : 'Nothing is saved yet.'}`);
@@ -125,7 +125,14 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
         secrets.push({ name: secretName, value });
       }
 
-      const r = await runCommand({ command, env: values, cwd, timeoutSec });
+      // Whatever went wrong while starting the command, the original message is never passed on: Node's own spawn errors
+      // can quote an environment value (for example one containing a null character) word for word.
+      let r;
+      try {
+        r = await runCommand({ command, env: values, cwd, timeoutSec });
+      } catch {
+        throw new Error("Couldn't start the command. Nothing ran.");
+      }
       const section = (label, text, cut) =>
         `--- ${label} ---\n${redactOutput(text, secrets, { truncated: cut }).trimEnd() || '(empty)'}${cut ? '\n(cut off at 1 MB)' : ''}`;
       const head = r.timedOut ? `Stopped: the command ran longer than ${timeoutSec} seconds.` : `Exit code: ${r.exitCode}`;

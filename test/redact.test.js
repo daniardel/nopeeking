@@ -33,3 +33,22 @@ test('redactOutput drops a secret cut in half at the end of truncated output', (
   assert.equal(out, 'x'.repeat(86)); // drops the longest form length (22 hex chars) from the end
   assert.equal(redactOutput('a SUPERSECRET b', secrets), 'a ••••(k) b');
 });
+
+test('redactOutput masks a secret that straddles the cut before trimming', () => {
+  const secrets = [{ name: 'k', value: 'SUPERSECRET' }];
+  const out = redactOutput(`${'x'.repeat(80)}SUPERSECRET${'y'.repeat(20)}`, secrets, { truncated: true });
+  // The cut lands inside the mask: no fragment of the secret (such as 'SUPERSECR') survives.
+  assert.equal(out, `${'x'.repeat(80)}••••(`);
+});
+
+test('redact masks overlapping occurrences of one secret as a single mask', () => {
+  assert.equal(redact('abcabcabc', [{ name: 'k', value: 'abcabc' }]), '••••(k)');
+});
+
+test('redact masks partly overlapping secrets without leaving fragments', () => {
+  assert.equal(redact('abcdefgh', [{ name: 'A', value: 'abcdef' }, { name: 'B', value: 'cdefgh' }]), '••••(A)');
+});
+
+test('redact keeps adjacent secrets as separate masks', () => {
+  assert.equal(redact('abcdwxyz', [{ name: 'A', value: 'abcd' }, { name: 'B', value: 'wxyz' }]), '••••(A)••••(B)');
+});

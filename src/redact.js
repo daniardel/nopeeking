@@ -20,17 +20,37 @@ export function encodedForms(value) {
 
 /** secrets: [{ name, value }] */
 export function redact(text, secrets) {
-  const pairs = secrets.flatMap(({ name, value }) =>
-    encodedForms(value).map((form) => ({ form, mask: `••••(${name})` })));
-  pairs.sort((a, b) => b.form.length - a.form.length);
-  let out = String(text);
-  for (const { form, mask } of pairs) out = out.split(form).join(mask);
-  return out;
+  const str = String(text);
+  // Find every occurrence of every form, including overlapping ones.
+  const spans = [];
+  for (const { name, value } of secrets) {
+    for (const form of encodedForms(value)) {
+      for (let i = str.indexOf(form); i !== -1; i = str.indexOf(form, i + 1)) {
+        spans.push({ start: i, end: i + form.length, name });
+      }
+    }
+  }
+  spans.sort((a, b) => a.start - b.start || b.end - a.end);
+  // Merge spans that overlap (not merely touch); a merged span keeps the name of its first span.
+  const merged = [];
+  for (const span of spans) {
+    const last = merged.at(-1);
+    if (last && span.start < last.end) last.end = Math.max(last.end, span.end);
+    else merged.push(span);
+  }
+  let out = '';
+  let pos = 0;
+  for (const { start, end, name } of merged) {
+    out += str.slice(pos, start) + `••••(${name})`;
+    pos = end;
+  }
+  return out + str.slice(pos);
 }
 
-/** Like redact, but when output was cut off, first drops the tail where half a secret could sit. */
+/** Like redact, but when output was cut off, drops the tail where half a secret could sit (after redacting). */
 export function redactOutput(text, secrets, { truncated = false } = {}) {
-  if (!truncated) return redact(text, secrets);
+  const out = redact(String(text), secrets);
+  if (!truncated) return out;
   const longest = Math.max(0, ...secrets.flatMap(({ value }) => encodedForms(value).map((f) => f.length)));
-  return redact(text.slice(0, Math.max(0, text.length - longest)), secrets);
+  return out.slice(0, Math.max(0, out.length - longest));
 }

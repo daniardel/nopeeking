@@ -22,8 +22,9 @@ export function fakeWindowsCred({ popupValue = null } = {}) {
       case 'get': return creds.has(target) ? result(0, creds.get(target).value) : result(3);
       case 'put': {
         if (creds.has(target)) return result(4);
-        const { comment, value } = JSON.parse(stdin);
-        creds.set(target, { comment, value });
+        // Like cred.ps1: the first line is the metadata, everything after the first newline is the value.
+        const newline = stdin.indexOf('\n');
+        creds.set(target, { comment: stdin.slice(0, newline), value: stdin.slice(newline + 1) });
         return result(0);
       }
       case 'delete': return creds.delete(target) ? result(0) : result(3);

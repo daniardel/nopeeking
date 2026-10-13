@@ -77,7 +77,10 @@ export function createVault({ run = runPs } = {}) {
       if (value.length > MAX_SECRET_CHARS) throw tooLong();
       // Node refuses to start a process whose environment holds a null character, and its error quotes the whole value.
       if (value.includes('\u0000')) throw new VaultError('BAD_VALUE', "Secrets can't contain a null character.");
-      const res = await run('cred.ps1', ['put', name], JSON.stringify({ comment: encodeMeta(meta), value }));
+      // First line: the metadata (JSON never contains a raw line break). Everything after it: the value, exactly.
+      // Not one JSON object: cred.ps1 would have to parse it with ConvertFrom-Json, a cmdlet, and PowerShell module logging
+      // can record the parameters a cmdlet receives, value included.
+      const res = await run('cred.ps1', ['put', name], `${encodeMeta(meta)}\n${value}`);
       if (res.code === EXIT.EXISTS) throw exists(name);
       if (res.code === EXIT.TOO_LONG) throw tooLong();
       if (res.code !== EXIT.OK) throw windowsFailed('save', res);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createVault } from '../src/vault.js';
+import { createVault, encodeMeta } from '../src/vault.js';
 import { fakeWindowsCred } from './helpers.js';
 
 const meta = { kind: 'web', site: 'netflix.com', created: '2026-10-13T00:00:00.000Z' };
@@ -14,6 +14,19 @@ test('put sends the value over stdin only; meta, get and list read it back', asy
   assert.deepEqual(await vault.meta('netflix'), { name: 'netflix', kind: 'web', site: 'netflix.com', created: meta.created });
   assert.equal(await vault.get('netflix'), 'hunter2-value');
   assert.deepEqual((await vault.list()).map((s) => s.name), ['netflix']);
+});
+
+test('put sends the metadata as the first stdin line and the value, exactly as it is, after it', async () => {
+  // Not JSON: cred.ps1 reads both with [Console]::In, so the value never passes through a cmdlet such as ConvertFrom-Json,
+  // whose parameters PowerShell module logging can record.
+  const calls = [];
+  const vault = createVault({ run: async (s, a, i) => { calls.push({ s, a, i }); return { code: 0, stdout: '', stderr: '' }; } });
+  const cmd = { kind: 'command', created: meta.created };
+  const value = 'line one\nline "two"\r\n';
+  await vault.put('gh', cmd, value);
+  assert.deepEqual(calls.map((c) => [c.s, c.a]), [['cred.ps1', ['put', 'gh']]]);
+  assert.equal(calls[0].i, `${encodeMeta(cmd)}\n${value}`);
+  assert.ok(!encodeMeta(meta).includes('\n'));
 });
 
 test('put refuses duplicates, too-short and too-long values with clear errors', async () => {

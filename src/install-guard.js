@@ -1,4 +1,4 @@
-// `npx passclaude install-guard`: copies the guard to ~/.claude/passclaude/ and registers it in
+// `node src/cli.js install-guard`: copies the guard to ~/.claude/passclaude/ and registers it in
 // ~/.claude/settings.json, after showing the exact change and asking first. Backs the file up before writing.
 import fs from 'node:fs';
 import os from 'node:os';

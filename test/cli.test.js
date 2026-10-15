@@ -10,7 +10,9 @@ const CLI = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 
 test('passclaude help prints the install command', { skip }, () => {
   const out = execFileSync(process.execPath, [CLI, 'help'], { encoding: 'utf8' });
-  assert.match(out, /claude mcp add --scope user passclaude -- npx -y passclaude/);
+  assert.ok(out.includes(`claude mcp add --scope user passclaude -- node "${CLI}"`), out);
+  assert.ok(out.includes(`node "${CLI}" install-guard`), out);
+  assert.doesNotMatch(out, /npx/);
 });
 
 test('passclaude with no arguments speaks MCP over stdio and nothing else', { skip }, async () => {

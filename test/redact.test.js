@@ -12,6 +12,17 @@ test('redact hides the raw value and its common encodings', () => {
   assert.match(out, /••••\(gh\)/);
 });
 
+test('redact hides the forms Windows PowerShell and .NET produce for JSON and URLs', () => {
+  const v = "p&s<'x> (a)!~";
+  const out = redact([
+    '{"t":"p\\u0026s\\u003c\\u0027x\\u003e (a)!~"}', // ConvertTo-Json in Windows PowerShell 5.1
+    'p%26s%3c%27x%3e%20(a)!~', // lowercase percent-encoding
+    'p%26s%3C%27x%3E%20%28a%29%21~', // [Uri]::EscapeDataString in PowerShell 7 (.NET Core and later)
+    'p%26s%3c%27x%3e+(a)!%7e', // [System.Web.HttpUtility]::UrlEncode
+  ].join('\n'), [{ name: 'k', value: v }]);
+  assert.equal(out, '{"t":"••••(k)"}\n••••(k)\n••••(k)\n••••(k)');
+});
+
 test('redact escapes JSON special characters the same way JSON does', () => {
   const v = 'pa"ss\\word';
   const out = redact(JSON.stringify({ token: v }), [{ name: 'k', value: v }]);
@@ -141,6 +152,15 @@ test('redact masks pieces of an encoded form too', () => {
   const b64 = Buffer.from(v).toString('base64');
   const out = redact(`start of the base64: ${b64.slice(0, 20)}`, [{ name: 'k', value: v }]);
   assert.equal(out, 'start of the base64: ••••(k)');
+});
+
+test('redact handles 1 MB of spaces and tabs without a line break in well under 3 seconds', () => {
+  const text = ' \t'.repeat(512 * 1024) + 'x\r\n  QWERTYuiop1234567890asdfghjklZXCVBNM';
+  const started = Date.now();
+  const out = redact(text, SHAPE_SECRETS);
+  const took = Date.now() - started;
+  assert.ok(!out.includes('QWERTYuiop12'), out.slice(-60));
+  assert.ok(took < 3000, `took ${took} ms`);
 });
 
 test('redact handles 1 MB of ordinary output with three secrets in well under 3 seconds', () => {

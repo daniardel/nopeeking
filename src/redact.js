@@ -14,21 +14,31 @@ export const MIN_SECRET_LENGTH = 4;
 const PIECE_LENGTH = 8;
 const EDGE_MIN = 3;
 const EDGE_MAX = PIECE_LENGTH - 1;
-const LINE_BREAK_RE = /[ \t]*\r?\n[ \t]*/g;
+const isBlank = (ch) => ch === ' ' || ch === '\t';
 const ELLIPSIS_RE = /\.\.\.|…/g;
+
+const percent = (ch) => '%' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
+const lowerHex = (str) => str.replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase());
 
 export function encodedForms(value) {
   const utf8 = Buffer.from(value, 'utf8');
   const base64 = utf8.toString('base64');
+  const uri = encodeURIComponent(value);
+  const json = JSON.stringify(value).slice(1, -1);
   const forms = [
     value,
     base64,
     base64.replace(/=+$/, ''),
     utf8.toString('base64url'),
-    encodeURIComponent(value),
+    uri,
+    lowerHex(uri),
+    uri.replace(/[!'()*]/g, percent), // [Uri]::EscapeDataString in PowerShell 7 (.NET Core and later)
+    lowerHex(uri.replace(/['~]/g, percent).replace(/%20/g, '+')), // [System.Web.HttpUtility]::UrlEncode
     utf8.toString('hex'),
     utf8.toString('hex').toUpperCase(),
-    JSON.stringify(value).slice(1, -1),
+    json,
+    // ConvertTo-Json in Windows PowerShell 5.1 also escapes these four.
+    json.replace(/[<>&']/g, (ch) => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')),
   ];
   return [...new Set(forms)].filter((form) => form.length >= MIN_SECRET_LENGTH);
 }
@@ -107,10 +117,17 @@ function withoutLineBreaks(str) {
   const parts = [];
   let length = 0;
   let pos = 0;
-  for (const match of str.matchAll(LINE_BREAK_RE)) {
-    for (let i = pos; i < match.index; i++) from[length++] = i;
-    parts.push(str.slice(pos, match.index));
-    pos = match.index + match[0].length;
+  // Each '\n' widened by hand over an optional '\r' and the spaces and tabs around it. A regex such as
+  // /[ \t]*\r?\n[ \t]*/g retries from every blank of a long run with no line break after it, which takes quadratic time.
+  for (let nl = str.indexOf('\n'); nl !== -1; nl = str.indexOf('\n', pos)) {
+    let start = nl;
+    if (start > pos && str[start - 1] === '\r') start--;
+    while (start > pos && isBlank(str[start - 1])) start--;
+    let end = nl + 1;
+    while (end < str.length && isBlank(str[end])) end++;
+    for (let i = pos; i < start; i++) from[length++] = i;
+    parts.push(str.slice(pos, start));
+    pos = end;
   }
   if (parts.length === 0) return null;
   for (let i = pos; i < str.length; i++) from[length++] = i;

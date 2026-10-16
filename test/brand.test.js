@@ -5,7 +5,9 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readTokens, tokensToCss, tokensToXaml, validateTokens } from '../scripts/brand/tokens.js';
+import sharp from 'sharp';
+import { checkFonts, iconIco, lockups, socialPng } from '../scripts/brand/build.js';
+import { fontFiles, readTokens, tokensToCss, tokensToXaml, validateTokens } from '../scripts/brand/tokens.js';
 import { writeAtomic } from '../scripts/brand/write.js';
 import { ICON_SIZES, decodeIco, encodeIco, pngSize } from '../scripts/brand/ico.js';
 import { lockupSvg, svgInner } from '../scripts/brand/compose.js';
@@ -89,7 +91,10 @@ const LOGOS = ['mark', 'mark-yellow', 'mark-mono', 'face-saved', 'face-error', '
 
 test('every logo file is a self-contained SVG in brand colours, with no live text', () => {
   const palette = new Set(Object.values(readTokens().color));
-  for (const name of LOGOS) {
+  const files = readdirSync(root('brand/logo'));
+  for (const name of LOGOS) assert.ok(files.includes(`${name}.svg`), `brand/logo/${name}.svg`);
+  assert.deepEqual(files.filter((f) => !f.endsWith('.svg')), [], 'brand/logo holds only SVGs');
+  for (const name of files.map((f) => f.replace(/\.svg$/, ''))) {
     const svg = lf(readFileSync(root(`brand/logo/${name}.svg`), 'utf8'));
     assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]* viewBox="[\d. ]+"/, name);
     assert.match(svg, /<\/svg>\n$/, name);
@@ -113,14 +118,43 @@ test('every font weight in tokens.json has its .ttf and .woff2, with the licence
   }
 });
 
-test('no font file is shipped without an entry in tokens.json', () => {
-  const known = new Set(fontRoles.flatMap((f) => Object.values(f.files)));
+test('the font folders hold exactly the files tokens.json names: .ttf in assets, .woff2 for the web, and the licences', () => {
+  const wanted = fontFiles(readTokens());
   for (const dir of ['assets/fonts', 'brand/web/fonts']) {
-    for (const name of readdirSync(root(dir))) {
-      if (name.startsWith('OFL-')) continue;
-      assert.ok(known.has(name.replace(/\.(ttf|woff2)$/, '')), `${dir}/${name} is not in brand/tokens.json`);
-    }
+    const expected = wanted.filter((p) => p.startsWith(`${dir}/`)).map((p) => p.slice(dir.length + 1)).sort();
+    assert.deepEqual(readdirSync(root(dir)).sort(), expected, dir);
   }
+});
+
+test('fontFiles names each weight in the right folder and format, and one licence per family', () => {
+  const t = readTokens();
+  t.font = { display: { family: 'Big Font', fallback: 'serif', files: { 800: 'BigFont-Black' } } };
+  assert.deepEqual(fontFiles(t).sort(), [
+    'assets/fonts/BigFont-Black.ttf', 'assets/fonts/OFL-BigFont.txt', 'brand/web/fonts/BigFont-Black.woff2', 'brand/web/fonts/OFL-BigFont.txt',
+  ]);
+});
+
+test('the brand build stops before writing anything when a font file is missing', () => {
+  const t = readTokens();
+  t.font.display.files[900] = 'NoSuchFont-Black';
+  assert.throws(() => checkFonts(t), /missing font files: assets\/fonts\/NoSuchFont-Black\.ttf, brand\/web\/fonts\/NoSuchFont-Black\.woff2/);
+  assert.doesNotThrow(() => checkFonts(readTokens()));
+});
+
+test('names used in generated CSS and XAML are refused when they could break out of them', () => {
+  const cases = [
+    [(t) => { t.radius['Big Radius'] = 4; }, /radius "Big Radius": names are lower-case/],
+    [(t) => { t.shadow['card}'] = t.shadow.card; }, /shadow "card}": names are lower-case/],
+    [(t) => { t.font['Display'] = t.font.display; }, /font "Display": names are lower-case/],
+    [(t) => { t.font.display.family = "Evil'; } body { x: '"; }, /font "display": family "Evil'; } body \{ x: '" is not letters, digits and spaces/],
+    [(t) => { t.font.display.fallback = 'serif; } *{'; }, /font "display": fallback "serif; } \*\{" is not a list of font names/],
+  ];
+  for (const [spoil, error] of cases) {
+    const t = readTokens();
+    spoil(t);
+    assert.throws(() => validateTokens(t), error);
+  }
+  assert.doesNotThrow(() => validateTokens(readTokens()));
 });
 
 test('outlines.json has every text the generated images need', () => {
@@ -147,7 +181,27 @@ test('encodeIco stores 256 px as 0 and decodeIco reads it back', () => {
   const ico = encodeIco(images);
   assert.equal(ico.readUInt8(6 + 16), 0, 'width byte of the 256 px entry');
   assert.equal(ico.readUInt8(6 + 16 + 1), 0, 'height byte of the 256 px entry');
-  assert.deepEqual(decodeIco(ico).map(({ size, png }) => [size, pngSize(png).width]), [[16, 16], [256, 256]]);
+  assert.deepEqual(decodeIco(ico).map(({ size, format, data }) => [size, format, pngSize(data).width]), [[16, 'png', 16], [256, 'png', 256]]);
+});
+
+test('encodeIco stores small sizes as 32-bit bitmaps, bottom row first in BGRA, with an empty mask', () => {
+  // 2×2: red, green on top; blue, half-clear white below.
+  const rgba = Buffer.from([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 128]);
+  const ico = encodeIco([{ size: 2, rgba }]);
+  const [entry] = decodeIco(ico);
+  assert.equal(entry.format, 'bmp');
+  const dib = entry.data;
+  assert.equal(dib.readUInt32LE(0), 40, 'BITMAPINFOHEADER');
+  assert.equal(dib.readInt32LE(4), 2);
+  assert.equal(dib.readInt32LE(8), 4, 'height counts the mask too');
+  assert.equal(dib.readUInt16LE(14), 32, 'bits per pixel');
+  assert.deepEqual([...dib.subarray(40, 56)], [255, 0, 0, 255, 255, 255, 255, 128, 0, 0, 255, 255, 0, 255, 0, 255]);
+  assert.deepEqual([...dib.subarray(56)], [0, 0, 0, 0, 0, 0, 0, 0], 'one 4-byte mask row per pixel row');
+  assert.equal(ico.readUInt32LE(6 + 8), dib.length, 'directory size matches');
+});
+
+test('encodeIco refuses pixels that do not match the size', () => {
+  assert.throws(() => encodeIco([{ size: 2, rgba: Buffer.alloc(15) }]), /2 px icon needs 16 bytes of RGBA/);
 });
 
 test('encodeIco refuses sizes Windows icons cannot hold', () => {
@@ -156,10 +210,18 @@ test('encodeIco refuses sizes Windows icons cannot hold', () => {
   }
 });
 
-test('assets/passclaude.ico holds every size, each a PNG of that size', () => {
+test('assets/passclaude.ico holds every size: bitmaps under 256 px, as older Windows code needs, and a 256 px PNG', () => {
   const entries = decodeIco(readFileSync(root('assets/passclaude.ico')));
   assert.deepEqual(entries.map((e) => e.size), ICON_SIZES);
-  for (const { size, png } of entries) assert.deepEqual(pngSize(png), { width: size, height: size });
+  for (const { size, format, data } of entries) {
+    if (size === 256) {
+      assert.equal(format, 'png');
+      assert.deepEqual(pngSize(data), { width: size, height: size });
+    } else {
+      assert.equal(format, 'bmp', `${size} px`);
+      assert.deepEqual([data.readInt32LE(4), data.readInt32LE(8)], [size, size * 2], `${size} px`);
+    }
+  }
 });
 
 test('lockupSvg puts the mark and the outlined wordmark side by side', () => {
@@ -203,4 +265,31 @@ test('brand.xaml gives WPF a brush per colour and the shape tokens, keyed in Pas
   assert.match(xaml, /<Thickness x:Key="Outline">2<\/Thickness>/);
   assert.match(xaml, /<Thickness x:Key="ShadowButton">5,5,0,0<\/Thickness>/);
   assert.doesNotMatch(xaml, /\r/);
+});
+
+test('the lockups are up to date with the mark, the outlines and tokens.json', () => {
+  for (const [path, svg] of Object.entries(lockups())) assert.equal(lf(readFileSync(root(path), 'utf8')), svg, `${path}: run \`npm run brand\``);
+});
+
+/** Same size, and almost every channel of every pixel within a small step: another sharp version may smooth edges differently. */
+function assertLooksSame(a, b, what) {
+  assert.equal(a.length, b.length, `${what}: size`);
+  let off = 0;
+  for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 16) off++;
+  assert.ok(off / a.length < 0.005, `${what}: ${off} of ${a.length} bytes differ, run \`npm run brand\``);
+}
+const rawPixels = async (png) => (await sharp(png).ensureAlpha().raw().toBuffer());
+
+test('assets/passclaude.ico is up to date with the mark', async () => {
+  const fresh = decodeIco(await iconIco());
+  const shipped = decodeIco(readFileSync(root('assets/passclaude.ico')));
+  assert.deepEqual(shipped.map((e) => [e.size, e.format]), fresh.map((e) => [e.size, e.format]));
+  for (const [i, { size, format, data }] of shipped.entries()) {
+    if (format === 'bmp') assertLooksSame(data, fresh[i].data, `${size} px`);
+    else assertLooksSame(await rawPixels(data), await rawPixels(fresh[i].data), `${size} px`);
+  }
+});
+
+test('brand/social-preview.png is up to date with the mark, the outlines and tokens.json', async () => {
+  assertLooksSame(await rawPixels(readFileSync(root('brand/social-preview.png'))), await rawPixels(await socialPng()), 'social preview');
 });

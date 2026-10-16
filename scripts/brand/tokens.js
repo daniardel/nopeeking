@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 const TOKENS = fileURLToPath(new URL('../../brand/tokens.json', import.meta.url));
 const HEX = /^#[0-9A-F]{6}$/;
 const NAME = /^[a-z][a-z0-9-]*$/;
+const FAMILY = /^[A-Za-z0-9][A-Za-z0-9 ]*$/;
+const FALLBACK = /^[A-Za-z0-9-]+( [A-Za-z0-9-]+)*(, [A-Za-z0-9-]+( [A-Za-z0-9-]+)*)*$/; // like "system-ui, sans-serif"
 const USED_BY_IMAGES = ['violet', 'yellow', 'ink', 'white', 'muted-on-dark']; // read by build.js for lockups and the social preview
 
 export function readTokens() {
@@ -23,6 +25,12 @@ export function validateTokens(t) {
     if (!NAME.test(name)) throw new Error(`color "${name}": names are lower-case letters, digits and dashes`);
     if (!HEX.test(hex)) throw new Error(`color "${name}": "${hex}" is not #RRGGBB in capitals`);
   }
+  // Every name becomes part of a CSS custom property and a XAML key, and font names go inside CSS quotes.
+  for (const key of ['radius', 'shadow', 'font']) {
+    for (const name of Object.keys(t[key])) {
+      if (!NAME.test(name)) throw new Error(`${key} "${name}": names are lower-case letters, digits and dashes`);
+    }
+  }
   for (const [name, px] of Object.entries(t.radius)) {
     if (!Number.isInteger(px) || px < 0) throw new Error(`radius "${name}": ${px} is not a whole number of pixels`);
   }
@@ -33,12 +41,25 @@ export function validateTokens(t) {
   }
   for (const [role, f] of Object.entries(t.font)) {
     if (typeof f.family !== 'string' || !f.family) throw new Error(`font "${role}": missing family`);
+    if (!FAMILY.test(f.family)) throw new Error(`font "${role}": family "${f.family}" is not letters, digits and spaces`);
     if (typeof f.fallback !== 'string' || !f.fallback) throw new Error(`font "${role}": missing fallback`);
+    if (!FALLBACK.test(f.fallback)) throw new Error(`font "${role}": fallback "${f.fallback}" is not a list of font names`);
     for (const [weight, file] of Object.entries(f.files ?? {})) {
       if (!/^[1-9]00$/.test(weight)) throw new Error(`font "${role}": weight ${weight} is not 100–900`);
       if (!/^[A-Za-z0-9-]+$/.test(file)) throw new Error(`font "${role}": bad file name "${file}"`);
     }
   }
+}
+
+/** Every font file the brand kit ships, repo-relative: a .ttf (PC windows) and .woff2 (web) per weight, an OFL per family. */
+export function fontFiles(t) {
+  const out = new Set();
+  for (const f of Object.values(t.font)) {
+    const licence = `OFL-${f.family.replace(/ /g, '')}.txt`;
+    out.add(`assets/fonts/${licence}`).add(`brand/web/fonts/${licence}`);
+    for (const file of Object.values(f.files ?? {})) out.add(`assets/fonts/${file}.ttf`).add(`brand/web/fonts/${file}.woff2`);
+  }
+  return [...out];
 }
 
 /** The stylesheet for brand/web/tokens.css: @font-face rules for the self-hosted fonts, then --pc-* custom properties. */

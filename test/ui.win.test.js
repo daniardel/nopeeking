@@ -94,6 +94,23 @@ test('a very long link (long name, long site, own relay) still fits the QR windo
   }
 });
 
+// System.Drawing skips PNG entries, so for 256 px it falls back to the largest bitmap. Windows itself and WPF read them.
+test('the app icon opens at every size in WPF, and in System.Drawing without failing', { skip }, () => {
+  const ico = fileURLToPath(new URL('../assets/passclaude.ico', import.meta.url));
+  const out = ps([
+    '-Command',
+    'Add-Type -AssemblyName System.Drawing, PresentationCore; ' +
+      `$p = '${ico}'; ` +
+      "foreach ($s in 16, 24, 32, 48, 64, 256) { try { $b = (New-Object System.Drawing.Icon $p, $s, $s).ToBitmap(); \"$s drawing $($b.Width)\" } catch { \"$s drawing failed\" } }; " +
+      '$d = [Windows.Media.Imaging.BitmapDecoder]::Create([uri]$p, 0, 1); $d.Frames | ForEach-Object { "$($_.PixelWidth) wpf" }',
+  ]);
+  const lines = out.trim().split(/\r?\n/);
+  for (const s of [16, 24, 32, 48, 64, 256]) {
+    assert.ok(lines.includes(`${s} drawing ${s === 256 ? 64 : s}`), `System.Drawing at ${s} px: ${lines.join(' | ')}`);
+    assert.ok(lines.includes(`${s} wpf`), `WPF at ${s} px: ${lines.join(' | ')}`);
+  }
+});
+
 test('the PowerShell scripts are plain ASCII, because Windows PowerShell reads them as ANSI', () => {
   for (const file of readdirSync(PS_DIR).filter((f) => f.endsWith('.ps1'))) {
     const bad = readFileSync(join(PS_DIR, file), 'utf8').match(/[^\x00-\x7F]/);

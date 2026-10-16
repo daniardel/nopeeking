@@ -55,9 +55,10 @@ function New-QrWindow([string]$Name, [string]$Kind, [string]$PathData, [int]$Mod
   $code = $window.FindName('Code')
   $code.Width = $Modules
   $code.Height = $Modules
-  # A whole number of pixels per module, and at least 4: a phone camera reads blurry, uneven modules badly.
+  # A whole number of pixels per module (a phone camera reads blurry, uneven modules badly), as large as fits the
+  # 300 px the window has room for, and never under 3.
   $box = $window.FindName('CodeBox')
-  $box.Width = $box.Height = $Modules * [Math]::Max(4, [Math]::Floor(340 / $Modules))
+  $box.Width = $box.Height = $Modules * [Math]::Max(3, [Math]::Floor(300 / $Modules))
   $window.FindName('Modules').Data = [Windows.Media.Geometry]::Parse($PathData)
   $window.FindName('SecretName').Text = $Name
   $window.FindName('Kind').Text = if ($Kind -eq 'web') { 'password' } else { 'secret' }

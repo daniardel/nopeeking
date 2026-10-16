@@ -3,8 +3,11 @@
 rem All it runs is: claude mcp add --scope user passclaude -- npx -y passclaude
 rem These first lines are a batch file that starts Windows PowerShell on the rest of this same file, which shows the
 rem installer window. Everything below is plain text: open the file in Notepad to read it.
+rem Full paths, and never look in the current folder for programs: a double-click starts this file in its own folder
+rem (often Downloads), where a planted powershell.exe, cmd.exe, node.exe or claude.exe must never run.
+set "NoDefaultCurrentDirectoryInExePath=1"
 set "PASSCLAUDE_INSTALLER=%~f0"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create([IO.File]::ReadAllText($env:PASSCLAUDE_INSTALLER)))"
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create([IO.File]::ReadAllText($env:PASSCLAUDE_INSTALLER)))"
 exit /b %errorlevel%
 #>
 
@@ -26,10 +29,13 @@ function Get-NodeVersion {
 
 function Test-ClaudeInstalled { return [bool](Get-Command claude -ErrorAction SilentlyContinue) }
 
+function Test-StepTimedOut([double]$StartedMs, [double]$NowMs) { return ($NowMs - $StartedMs) -gt 60000 }
+
 # Starts a command through cmd.exe without a console window and returns the process; output is read asynchronously so
 # a chatty command can never fill its pipe and hang.
 function Start-Hidden([string]$CommandLine) {
-  $info = New-Object Diagnostics.ProcessStartInfo 'cmd.exe', "/d /c $CommandLine"
+  $info = New-Object Diagnostics.ProcessStartInfo (Join-Path $env:SystemRoot 'System32\cmd.exe'), "/d /c $CommandLine"
+  $info.WorkingDirectory = $env:USERPROFILE  # not the download folder
   $info.CreateNoWindow = $true
   $info.UseShellExecute = $false
   $info.RedirectStandardOutput = $true
@@ -370,58 +376,93 @@ if ($env:PASSCLAUDE_INSTALLER_TEST) {
   }
   $versions = [ordered]@{}
   foreach ($v in 'v18.19.0', 'v19.9.0', 'v20.0.0', 'v22.11.0', 'v100.1.0', '', 'garbage') { $versions[$v] = Test-NodeVersion $v }
-  [pscustomobject]@{ screens = $screens; command = $Command; nodeVersions = $versions } | ConvertTo-Json -Compress
+  $timedOut = [ordered]@{ '59s' = (Test-StepTimedOut 0 59000); '61s' = (Test-StepTimedOut 0 61000) }
+  [pscustomobject]@{ screens = $screens; command = $Command; nodeVersions = $versions; stepTimedOut = $timedOut } | ConvertTo-Json -Compress
   return
 }
 
-$ui = New-InstallerWindow
-$state = @{ Screen = 'checking'; Process = $null; Next = $null }
-$timer = New-Object Windows.Threading.DispatcherTimer
-$timer.Interval = [TimeSpan]::FromMilliseconds(150)
+try {
+  $ui = New-InstallerWindow
+  $state = @{ Screen = 'checking'; Process = $null; Next = $null; Started = 0 }
+  $timer = New-Object Windows.Threading.DispatcherTimer
+  $timer.Interval = [TimeSpan]::FromMilliseconds(150)
+  $now = { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
 
-# One step at a time: start a hidden command, and when it ends hand its exit code to the next step.
-function Wait-ForProcess([scriptblock]$Then) {
-  $state.Next = $Then
-  $timer.Start()
+  # Anything unexpected ends on the "failed" screen, never on a window stuck at "Checking..." or "Adding...".
+  function Invoke-Safely([scriptblock]$Work) {
+    try { & $Work } catch { $timer.Stop(); $state.Screen = 'failed'; Show-Screen $ui 'failed' }
+  }
+
+  # One step at a time: start a hidden command, and when it ends hand its exit code to the next step. A command that
+  # hangs is stopped after 60 seconds and counts as failed.
+  function Wait-ForProcess([scriptblock]$Then) {
+    $state.Next = $Then
+    $state.Started = & $now
+    $timer.Start()
+  }
+  $timer.Add_Tick({
+      Invoke-Safely {
+        if (-not $state.Process) { return }
+        if ($state.Process.HasExited) {
+          $code = $state.Process.ExitCode
+        } elseif (Test-StepTimedOut $state.Started (& $now)) {
+          try { $state.Process.Kill() } catch {}
+          $code = -1
+        } else {
+          return
+        }
+        $timer.Stop()
+        $state.Process = $null
+        & $state.Next $code
+      }
+    })
+
+  function Start-Checks {
+    Show-Screen $ui 'checking'
+    $ui.Window.Dispatcher.Invoke([action] {}, 'Render')  # paint "Checking..." before the checks run
+    if (-not (Test-NodeVersion (Get-NodeVersion))) { $state.Screen = 'missing-node'; Show-Screen $ui 'missing-node'; return }
+    if (-not (Test-ClaudeInstalled)) { $state.Screen = 'missing-claude'; Show-Screen $ui 'missing-claude'; return }
+    Set-Row $ui 'node' 'ok' 'Found'
+    Set-Row $ui 'claude' 'ok' 'Found'
+    $state.Process = Start-Hidden 'claude mcp get passclaude'
+    Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'already' } else { $state.Screen = 'ready' }; Show-Screen $ui $state.Screen }
+  }
+
+  function Start-Install {
+    $state.Screen = 'working'
+    Show-Screen $ui 'working'
+    $state.Process = Start-Hidden $Command
+    Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'done' } else { $state.Screen = 'failed' }; Show-Screen $ui $state.Screen }
+  }
+
+  $ui.ActionButton.Add_Click({
+      Invoke-Safely {
+        switch ($state.Screen) {
+          'missing-node' { Start-Process $NodeUrl }
+          'missing-claude' { Start-Process $ClaudeUrl }
+          default { Start-Install }
+        }
+      }
+    })
+  $ui.HelpLink.Add_Click({ Invoke-Safely { Start-Process $HelpUrl } })
+  $ui.CloseButton.Add_Click({ $ui.Window.Close() })
+  $ui.CloseX.Add_Click({ $ui.Window.Close() })
+  $ui.Header.Add_MouseLeftButtonDown({ $ui.Window.DragMove() })
+  $ui.Window.Add_KeyDown({ param($s, $e) if ($e.Key -eq 'Escape') { $ui.Window.Close() } })
+  $ui.Window.Add_ContentRendered({ $ui.Window.Activate() | Out-Null; Invoke-Safely { Start-Checks } })
+
+  # The window is ready: hide the empty console behind it. If this fails the console simply stays.
+  try {
+    Add-Type -Namespace PassClaude -Name Console -MemberDefinition @'
+[System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow();
+[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hwnd, int cmd);
+'@
+    $null = [PassClaude.Console]::ShowWindow([PassClaude.Console]::GetConsoleWindow(), 0)
+  } catch {}
+  $null = $ui.Window.ShowDialog()
+} catch {
+  # The window itself could not be built: say so in the console instead of closing without a word.
+  Write-Host ''
+  Write-Host "  The installer window could not open ($($_.Exception.Message))."
+  Install-InConsole
 }
-$timer.Add_Tick({
-    if ($state.Process -and $state.Process.HasExited) {
-      $timer.Stop()
-      $code = $state.Process.ExitCode
-      $state.Process = $null
-      & $state.Next $code
-    }
-  })
-
-function Start-Checks {
-  Show-Screen $ui 'checking'
-  $ui.Window.Dispatcher.Invoke([action] {}, 'Render')  # paint "Checking..." before the checks run
-  if (-not (Test-NodeVersion (Get-NodeVersion))) { $state.Screen = 'missing-node'; Show-Screen $ui 'missing-node'; return }
-  if (-not (Test-ClaudeInstalled)) { $state.Screen = 'missing-claude'; Show-Screen $ui 'missing-claude'; return }
-  Set-Row $ui 'node' 'ok' 'Found'
-  Set-Row $ui 'claude' 'ok' 'Found'
-  $state.Process = Start-Hidden 'claude mcp get passclaude'
-  Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'already' } else { $state.Screen = 'ready' }; Show-Screen $ui $state.Screen }
-}
-
-function Start-Install {
-  $state.Screen = 'working'
-  Show-Screen $ui 'working'
-  $state.Process = Start-Hidden $Command
-  Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'done' } else { $state.Screen = 'failed' }; Show-Screen $ui $state.Screen }
-}
-
-$ui.ActionButton.Add_Click({
-    switch ($state.Screen) {
-      'missing-node' { Start-Process $NodeUrl }
-      'missing-claude' { Start-Process $ClaudeUrl }
-      default { Start-Install }
-    }
-  })
-$ui.HelpLink.Add_Click({ Start-Process $HelpUrl })
-$ui.CloseButton.Add_Click({ $ui.Window.Close() })
-$ui.CloseX.Add_Click({ $ui.Window.Close() })
-$ui.Header.Add_MouseLeftButtonDown({ $ui.Window.DragMove() })
-$ui.Window.Add_KeyDown({ param($s, $e) if ($e.Key -eq 'Escape') { $ui.Window.Close() } })
-$ui.Window.Add_ContentRendered({ $ui.Window.Activate() | Out-Null; Start-Checks })
-$null = $ui.Window.ShowDialog()

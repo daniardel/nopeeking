@@ -57,7 +57,7 @@ test('refuses command secrets, unknown names and a missing Chrome', async () => 
   assert.match((await typeSecret({ name: 'gh', vault, win })).reason, /command secret/);
   assert.match((await typeSecret({ name: 'nope', vault, win })).reason, /No secret named "nope"/);
   const empty = await setup([]);
-  assert.match((await typeSecret({ name: 'netflix', vault: empty.vault, win: empty.win })).reason, /No Chrome window/);
+  assert.match((await typeSecret({ name: 'netflix', vault: empty.vault, win: empty.win })).reason, /Couldn't read any Chrome window\. .*visible tab.*completely covered/);
 });
 
 test('explains each refusal from the typing script', async () => {
@@ -93,7 +93,7 @@ test('the site lock refusal never echoes address-bar text, only web hosts or "a 
   ]);
   const r = await typeSecret({ name: 'netflix', vault, win });
   assert.equal(r.ok, false);
-  assert.equal(r.reason, 'Site lock: "netflix" is locked to netflix.com, but Chrome is showing a non-web page, netflix.com.evil.ru, localhost. Nothing was typed.');
+  assert.equal(r.reason, 'Site lock: "netflix" is locked to netflix.com, but Chrome is showing a non-web page, netflix.com.evil.ru, localhost. Nothing was typed. passClaude reads the tab each Chrome window is showing: make the login page the visible tab, then try again.');
   for (const leaked of ['my pin 1234', 'pin 1234', 'hunter2', 'file:', 'secret.txt', 'user:pw', 'chrome://', 'settings/passwords']) {
     assert.ok(!r.reason.includes(leaked), `reason leaks "${leaked}": ${r.reason}`);
   }

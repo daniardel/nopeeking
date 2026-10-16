@@ -86,7 +86,7 @@ Website passwords and command secrets are kept apart: a website password can onl
 - A tricked Claude could show you a fake phone link that sends what you type to someone else. The phone page can't tell a real link from a fake one. Only open a phone link right after you asked Claude to save a secret, and check the name and site it shows.
 - Claude chooses a secret's name and site. Check the site shown in the popup or on the phone page before you type. A password saved for the wrong site is typed on that wrong site.
 - Your phone's browser might offer to save what you typed in its own password manager. Tap Never if you don't want a copy there.
-- Typing needs the PC unlocked with Chrome open on it. Remote Control drives your PC; passClaude types on the PC, not on your phone.
+- Typing needs the PC unlocked, with the login page as the visible tab of a Chrome window that isn't minimized or completely covered (for example by a full-screen game). Claude in Chrome sometimes opens pages in a background tab: if passClaude says Chrome is showing another site, switch to the login tab. Remote Control drives your PC; passClaude types on the PC, not on your phone.
 
 ### Optional guard
 

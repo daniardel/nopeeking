@@ -46,7 +46,7 @@ const TOOLS = {
     annotations: { readOnlyHint: true },
   },
   type_secret: {
-    description: "Type a saved website password into Chrome. First open the secret's site in Chrome and click its password box. passClaude checks the site and that a password box is focused, then types. It does not press Enter: click the sign-in button yourself. The PC must be unlocked.",
+    description: "Type a saved website password into Chrome. First open the secret's site in Chrome, make it the visible tab of a Chrome window that isn't minimized or completely covered (ask the user to switch to it if needed), and click its password box. passClaude checks the site and that a password box is focused, then types. It does not press Enter: click the sign-in button yourself. The PC must be unlocked.",
     inputSchema: { name: secretName },
   },
   run_with_secret: {

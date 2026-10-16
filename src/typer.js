@@ -21,7 +21,7 @@ export async function typeSecret({ name, vault, win }) {
   if (meta.kind !== 'web') return { ok: false, reason: `"${name}" is a command secret and can only be used with run_with_secret.` };
 
   const windows = await win.chromeWindows();
-  if (windows.length === 0) return { ok: false, reason: 'No Chrome window found. Open the login page in Chrome first.' };
+  if (windows.length === 0) return { ok: false, reason: "Couldn't read any Chrome window. Open the login page in Chrome, make it the visible tab, and bring Chrome to the front: passClaude can't read a Chrome window that is minimized or completely covered." };
 
   const matching = windows.filter((w) => siteMatches(w.url, meta.site));
   const target = matching.find((w) => w.foreground) ?? (matching.length === 1 ? matching[0] : null);
@@ -30,7 +30,7 @@ export async function typeSecret({ name, vault, win }) {
       return { ok: false, reason: `Several Chrome windows are on ${meta.site}. Bring the right one to the front or close the others, then try again.` };
     }
     const shown = [...new Set(windows.map((w) => describeWindow(w.url)))].join(', ');
-    return { ok: false, reason: `Site lock: "${name}" is locked to ${meta.site}, but Chrome is showing ${shown}. Nothing was typed.` };
+    return { ok: false, reason: `Site lock: "${name}" is locked to ${meta.site}, but Chrome is showing ${shown}. Nothing was typed. passClaude reads the tab each Chrome window is showing: make the login page the visible tab, then try again.` };
   }
 
   const result = await win.typeInto(name, target.hwnd, target.url);

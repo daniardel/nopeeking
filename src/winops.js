@@ -1,7 +1,7 @@
-// Windows-side Chrome checks and typing, via src/ps/focus.ps1 and src/ps/type.ps1.
+// Windows-side Chrome checks, typing and the typed notification, via src/ps/focus.ps1, type.ps1 and toast.ps1.
 import { runPs, EXIT } from './windows.js';
 
-export function createWinOps({ run = runPs } = {}) {
+export function createWinOps({ run = runPs, notify = true } = {}) {
   return {
     /** Every Chrome window with the text in its address bar. */
     async chromeWindows() {
@@ -25,6 +25,12 @@ export function createWinOps({ run = runPs } = {}) {
       const word = res.stdout.trim();
       if (res.code === EXIT.OK && word === 'TYPED') return 'TYPED';
       return word || `EXIT_${res.code}`;
+    },
+
+    /** Shows "passClaude typed your … password" in the corner for a few seconds. Never waits for it, never throws. */
+    notifyTyped({ name, site }) {
+      if (!notify) return;
+      run('toast.ps1', [], JSON.stringify({ name, site }), { timeoutMs: 20_000 }).catch(() => {});
     },
   };
 }

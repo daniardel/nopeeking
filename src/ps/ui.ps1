@@ -10,6 +10,7 @@ $script:PcAssets = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\assets
 Add-Type -Namespace PassClaude -Name Show -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(System.IntPtr hwnd, int cmd);
 public static void Window(System.IntPtr hwnd) { ShowWindow(hwnd, 5); }
+public static void WindowNoActivate(System.IntPtr hwnd) { ShowWindow(hwnd, 4); }
 '@
 
 # The padlock's faces, on the 64-unit grid of brand/logo/mark.svg.
@@ -43,7 +44,7 @@ function New-PcResources {
   return $resources
 }
 
-# Markup for the padlock (64×64 units) to place inside a Viewbox. $MouthName names its mouth for Set-PcFace.
+# Markup for the padlock (64 x 64 units) to place inside a Viewbox. $MouthName names its mouth for Set-PcFace.
 function Get-PcPadlockXaml([string]$Body = 'Violet', [string]$Shackle = 'Ink', [string]$Face = 'White', [string]$MouthName = '') {
   $name = if ($MouthName) { " x:Name=`"$MouthName`"" } else { '' }
   return @"
@@ -80,10 +81,11 @@ function Show-PcDialog($Window) {
   return [bool]$Window.ShowDialog()
 }
 
-# Draws a window's content to a PNG at $Scale × 96 dpi, laid out at the window's width, without showing anything.
+# Draws a window's content to a PNG at $Scale x 96 dpi, laid out at the window's width, without showing anything.
 function Save-PcPng($Window, [string]$Path, [double]$Scale = 1) {
   $Element = $Window.Content
-  $Element.Measure((New-Object Windows.Size $Window.Width, ([double]::PositiveInfinity)))
+  $available = if ([double]::IsNaN($Window.Width)) { [double]::PositiveInfinity } else { $Window.Width }
+  $Element.Measure((New-Object Windows.Size $available, ([double]::PositiveInfinity)))
   $Element.Arrange((New-Object Windows.Rect (New-Object Windows.Point 0, 0), $Element.DesiredSize))
   $Element.UpdateLayout()
   $width = [int][Math]::Ceiling($Element.DesiredSize.Width * $Scale)  # DesiredSize includes the margin around the card

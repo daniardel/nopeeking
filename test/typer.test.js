@@ -20,7 +20,7 @@ test('types into the foreground Chrome window when it is on the locked site', as
     { hwnd: '1', url: 'other.com', foreground: false },
     { hwnd: '2', url: 'www.netflix.com/login', foreground: true },
   ]);
-  assert.deepEqual(await typeSecret({ name: 'netflix', vault, win }), { ok: true });
+  assert.deepEqual(await typeSecret({ name: 'netflix', vault, win }), { ok: true, site: 'netflix.com' });
   assert.deepEqual(typed, [{ name: 'netflix', hwnd: '2', url: 'www.netflix.com/login' }]);
 });
 
@@ -29,7 +29,7 @@ test('uses a background Chrome window when it is the only one on the site', asyn
     { hwnd: '1', url: 'netflix.com/login', foreground: false },
     { hwnd: '2', url: 'other.com', foreground: true },
   ]);
-  assert.deepEqual(await typeSecret({ name: 'netflix', vault, win }), { ok: true });
+  assert.deepEqual(await typeSecret({ name: 'netflix', vault, win }), { ok: true, site: 'netflix.com' });
   assert.equal(typed[0].hwnd, '1');
 });
 

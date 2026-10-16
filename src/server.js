@@ -86,10 +86,11 @@ export function createDeps(env = process.env) {
   const config = {
     ntfyUrl: (env.PASSCLAUDE_NTFY_URL || 'https://ntfy.sh').replace(/\/+$/, ''),
     pageUrl: env.PASSCLAUDE_PAGE_URL || pkg.passclaude?.pageUrl || '',
+    notify: (env.PASSCLAUDE_NOTIFY ?? '').toLowerCase() !== 'off',
   };
   const vault = createVault();
   const ntfy = createNtfy({ baseUrl: config.ntfyUrl });
-  return { config, vault, win: createWinOps(), phone: createPhone({ vault, ntfy, pageUrl: config.pageUrl }), runCommand };
+  return { config, vault, win: createWinOps({ notify: config.notify }), phone: createPhone({ vault, ntfy, pageUrl: config.pageUrl }), runCommand };
 }
 
 export async function startServer() {

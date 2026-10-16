@@ -22,14 +22,16 @@ async function setup({
   popupValue = null,
   phoneStatus = 'saved',
   run = leakyRun,
+  notify = 'ok',
 } = {}) {
   const vault = memoryVault({ popupValue });
   await vault.put('netflix', { kind: 'web', site: 'netflix.com', created: '2026-10-13T00:00:00.000Z' }, WEB);
   await vault.put('github', { kind: 'command', created: '2026-10-13T00:00:00.000Z' }, CMD);
-  const calls = { typed: [], started: [], runs: [], forgotten: [] };
+  const calls = { typed: [], started: [], runs: [], forgotten: [], notified: [] };
   const win = {
     chromeWindows: async () => windows,
     typeInto: async (name, hwnd, url) => { calls.typed.push({ name, hwnd, url }); return typeResult; },
+    notifyTyped: (what) => { calls.notified.push(what); if (notify === 'throws') throw new Error('no toast'); },
   };
   const phone = {
     start: async (req) => {
@@ -107,6 +109,17 @@ test('type_secret types web secrets and explains refusals', async () => {
   const wrongSite = await setup({ windows: [{ hwnd: '1', url: 'evil.com/login', foreground: true }] });
   await assert.rejects(wrongSite.tools.type_secret({ name: 'netflix' }), /Site lock/);
   assert.equal(wrongSite.calls.typed.length, 0);
+});
+
+test('type_secret shows the typed notification only after typing, and never fails because of it', async () => {
+  const { tools, calls } = await setup();
+  await tools.type_secret({ name: 'netflix' });
+  assert.deepEqual(calls.notified, [{ name: 'netflix', site: 'netflix.com' }]);
+  const refused = await setup({ typeResult: 'NOT_PASSWORD_FIELD' });
+  await assert.rejects(refused.tools.type_secret({ name: 'netflix' }));
+  assert.deepEqual(refused.calls.notified, []);
+  const broken = await setup({ notify: 'throws' });
+  assert.match(await broken.tools.type_secret({ name: 'netflix' }), /Typed the password for "netflix"/);
 });
 
 test('run_with_secret passes secrets as env vars and masks them in the output', async () => {

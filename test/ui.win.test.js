@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,6 +33,29 @@ test('the save-a-secret window draws in the brand fonts, in each of its states',
     }
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the typed notification says what was typed where, stays on top and never takes focus', { skip }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pc-ui-'));
+  try {
+    const report = JSON.parse(ps(['-File', RENDER, '-Out', dir]).trim().split('\n').pop());
+    assert.equal(report.toastTitle, 'Typed your netflix password');
+    assert.equal(report.toastDetail, 'Into netflix.com in Chrome. It never went through the chat.');
+    assert.equal(report.toastTakesFocus, false);
+    assert.equal(report.toastTopmost, true);
+    assert.equal(report.toastInTaskbar, false);
+    const { width, height } = pngSize(readFileSync(join(dir, 'toast.png')));
+    assert.ok(width >= 600 && height >= 150, `toast.png is ${width}×${height}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the PowerShell scripts are plain ASCII, because Windows PowerShell reads them as ANSI', () => {
+  for (const file of readdirSync(PS_DIR).filter((f) => f.endsWith('.ps1'))) {
+    const bad = readFileSync(join(PS_DIR, file), 'utf8').match(/[^\x00-\x7F]/);
+    assert.equal(bad, null, `${file} has "${bad?.[0]}": write it as [char]0x… in code or &#…; in XAML`);
   }
 });
 

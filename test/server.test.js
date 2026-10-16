@@ -58,6 +58,13 @@ test('tool results are text; refusals and invalid input come back marked as erro
   await client.close();
 });
 
+test('PASSCLAUDE_NOTIFY=off turns the typed notification off', () => {
+  assert.equal(createDeps({}).config.notify, true);
+  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'off' }).config.notify, false);
+  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'OFF' }).config.notify, false);
+  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'on' }).config.notify, true);
+});
+
 test('createDeps reads the relay and page from the environment, then package.json', () => {
   const deps = createDeps({ PASSCLAUDE_NTFY_URL: 'https://relay.example/', PASSCLAUDE_PAGE_URL: 'https://page.example/' });
   assert.equal(deps.config.ntfyUrl, 'https://relay.example');

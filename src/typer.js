@@ -34,6 +34,6 @@ export async function typeSecret({ name, vault, win }) {
   }
 
   const result = await win.typeInto(name, target.hwnd, target.url);
-  if (result === 'TYPED') return { ok: true };
+  if (result === 'TYPED') return { ok: true, site: meta.site };
   return { ok: false, reason: REASONS[result] ?? `Typing failed (${result}). The password box may be partly filled: clear it and try again.` };
 }

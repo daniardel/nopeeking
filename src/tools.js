@@ -94,7 +94,14 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
     async type_secret({ name }) {
       checkName(name);
       const result = await typeSecret({ name, vault, win });
-      if (result.ok) return `Typed the password for "${name}". Enter was not pressed: click the sign-in button next.`;
+      if (result.ok) {
+        try {
+          win.notifyTyped?.({ name, site: result.site });
+        } catch {
+          // The notification is a courtesy: the password is typed either way.
+        }
+        return `Typed the password for "${name}". Enter was not pressed: click the sign-in button next.`;
+      }
       if (result.reason.startsWith('No secret named')) throw await notFound(name);
       throw new Error(result.reason);
     },

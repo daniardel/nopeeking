@@ -4,6 +4,7 @@ param([Parameter(Mandatory = $true)][string]$Out)
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot\..\..\src\ps\ui.ps1"
 . "$PSScriptRoot\..\..\src\ps\prompt-ui.ps1"
+. "$PSScriptRoot\..\..\src\ps\toast-ui.ps1"
 
 $web = New-PromptWindow -Name 'netflix' -Kind 'web' -Site 'netflix.com'
 Save-PcPng $web.Window (Join-Path $Out 'prompt-web.png') 2
@@ -33,6 +34,9 @@ Save-PcPng $toggle.Window (Join-Path $Out 'prompt-shown.png') 2
 $toggle.Window.FindName('Show').IsChecked = $false
 $okAfterToggle = ($null -eq $toggle.TrySave()) -and ($toggle.Value() -ceq $typed)
 
+$toast = New-ToastWindow -Name 'netflix' -Site 'netflix.com'
+Save-PcPng $toast.Window (Join-Path $Out 'toast.png') 2
+
 [pscustomobject]@{
   display = $web.Window.Resources['FontDisplay'].Source
   body = $web.Window.Resources['FontBody'].Source
@@ -44,4 +48,9 @@ $okAfterToggle = ($null -eq $toggle.TrySave()) -and ($toggle.Value() -ceq $typed
   errorShown = ($mismatch.Window.FindName('ErrorBox').Visibility -eq 'Visible')
   shownText = ($shownText -ceq $typed)
   okAfterToggle = $okAfterToggle
+  toastTitle = $toast.Window.FindName('Title').Text
+  toastDetail = $toast.Window.FindName('Detail').Text
+  toastTakesFocus = [bool]$toast.Window.ShowActivated
+  toastTopmost = [bool]$toast.Window.Topmost
+  toastInTaskbar = [bool]$toast.Window.ShowInTaskbar
 } | ConvertTo-Json -Compress

@@ -2,7 +2,7 @@
 
 **Let Claude Code log into websites and use your API keys without ever seeing them.**
 
-[![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![npm](https://img.shields.io/npm/v/passclaude)](https://www.npmjs.com/package/passclaude) [![tests](https://github.com/daniardel/passclaude/actions/workflows/test.yml/badge.svg)](https://github.com/daniardel/passclaude/actions/workflows/test.yml) [![license](https://img.shields.io/npm/l/passclaude)](LICENSE)
 
 You never paste a password into the chat. You type it once, into a popup on your PC or a one-time encrypted link on your phone. After that Claude can *use* it, but passClaude's tools never return the value, so it stays out of the conversation, the transcript and the model. There are a few ways it can still get out: read "Not protected" below.
 
@@ -13,20 +13,19 @@ You never paste a password into the chat. You type it once, into a popup on your
 
 ## Install
 
-```
-git clone https://github.com/daniardel/passclaude.git
-cd passclaude
-npm install
-node src/cli.js help
-```
+You need Windows 10 or 11, [Node.js](https://nodejs.org) 20 or newer and [Claude Code](https://docs.claude.com/en/docs/claude-code/setup). For website logins you also need Chrome with Claude in Chrome.
 
-The last line prints the exact command that adds passClaude to Claude Code from this folder, for example:
+**One click:** download [install-passclaude.cmd](https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd) and double-click it. It checks that Node.js and Claude Code are there and adds passClaude. Windows may warn that the file comes from the internet: choose "More info", then "Run anyway". It's a short text file, so you can open it in Notepad to read it first.
+
+**One command:**
 
 ```
-claude mcp add --scope user passclaude -- node "C:\Users\you\passclaude\src\cli.js"
+claude mcp add --scope user passclaude -- npx -y passclaude
 ```
 
-Run it, then restart Claude Code. You need Windows 10 or 11, [Node.js](https://nodejs.org) 20 or newer and Claude Code. For website logins you also need Chrome with Claude in Chrome.
+**Or ask Claude:** paste this into Claude Code: *Install passClaude for me by running `claude mcp add --scope user passclaude -- npx -y passclaude`.*
+
+Then restart Claude Code.
 
 ## What to say to Claude
 
@@ -82,6 +81,7 @@ Website passwords and command secrets are kept apart: a website password can onl
 - Masking hides the whole secret in the output, its common encodings (base64, URL-encoded, hex, JSON-escaped), and any piece of 8 or more characters of them, also when Windows PowerShell wraps a long value onto the next line or shortens it with `...`. It can't catch pieces shorter than 8 characters, other encodings, or a value that the command deliberately reshapes, for example by reversing it, splitting it up or re-encoding it. Because it masks pieces, masking can occasionally also hide ordinary text that happens to match part of a secret. Read the command before you approve it.
 - Once typed, a password sits in the page's password box. Scripts on that page can read it, just like when you type it yourself. So can Claude's own browser tools: Claude in Chrome can run JavaScript on the page, or click "show password" and take a screenshot, and that puts the password in the chat. passClaude can't stop this. The site lock only limits where the password is typed. Watch what Claude does on the page after it types.
 - The phone page is served from GitHub Pages ([daniardel/passclaude-phone](https://github.com/daniardel/passclaude-phone)). Whoever controls that repo controls the page's code. You can host your own copy (see Configuration).
+- The site lock reads Chrome's address bar. It is tested with English Chrome. Other languages use a fallback that finds the address bar as the first text box outside the web page, which has not been tested in a non-English Chrome yet.
 - The one-time link appears in the chat. It contains no secret: only a public key, a random relay topic, the secret's name, kind and site, when it expires, and the relay address. But the link works like a key: anyone who sees it before you use it could send their own value to it within its 5 minutes. Open it right away. After you send, your phone page must say "Saved". If Claude says it saved but your phone page didn't, delete the secret and try again.
 - A tricked Claude could show you a fake phone link that sends what you type to someone else. The phone page can't tell a real link from a fake one. Only open a phone link right after you asked Claude to save a secret, and check the name and site it shows.
 - Claude chooses a secret's name and site. Check the site shown in the popup or on the phone page before you type. A password saved for the wrong site is typed on that wrong site.
@@ -91,10 +91,8 @@ Website passwords and command secrets are kept apart: a website password can onl
 ### Optional guard
 
 ```
-node src/cli.js install-guard
+npx -y passclaude install-guard
 ```
-
-(run in the passClaude folder)
 
 Shows the exact change, asks first, backs up `~/.claude/settings.json`, then adds a hook that blocks shell commands which try to read saved secrets directly (`cmdkey`, the Windows credential APIs, hidden base64 PowerShell commands and similar).
 
@@ -107,12 +105,12 @@ The hook covers Claude Code's Bash and PowerShell tools and also passClaude's ow
 | `PASSCLAUDE_NTFY_URL` | `https://ntfy.sh` | Relay for phone links. Point it at your own [ntfy](https://docs.ntfy.sh/install/) server if you like. |
 | `PASSCLAUDE_PAGE_URL` | `https://daniardel.github.io/passclaude-phone/` | Where phone links open. Host the page yourself and point this at it. |
 
-A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `app.js`, `link.js` and `e2e.js` from the `docs/` folder.
+A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `app.js`, `link.js` and `e2e.js` from the `docs/` folder of the GitHub repo. The npm package only ships `docs/e2e.js`.
 
 Example:
 
 ```
-claude mcp add --env PASSCLAUDE_NTFY_URL=https://ntfy.example.com --scope user passclaude -- node "C:\Users\you\passclaude\src\cli.js"
+claude mcp add --env PASSCLAUDE_NTFY_URL=https://ntfy.example.com --scope user passclaude -- npx -y passclaude
 ```
 
 ## FAQ
@@ -159,13 +157,19 @@ If you already use one with Claude, that may suit you better. passClaude is for 
 ## Development
 
 ```
+git clone https://github.com/daniardel/passclaude.git
+cd passclaude
 npm install
 npm test
 ```
 
-The design is in [`docs/superpowers/specs/`](docs/superpowers/specs/).
+To try your copy in Claude Code: `claude mcp add --scope user passclaude -- node "<this folder>\src\cli.js"`.
 
 The phone page is `docs/index.html`, `docs/app.js`, `docs/link.js` and `docs/e2e.js`. The live copy is in the public [passclaude-phone](https://github.com/daniardel/passclaude-phone) repo. After changing any of these files, copy them there and push, or phone links keep opening the old page.
+
+## Reporting a security problem
+
+Please don't open a public issue. See [SECURITY.md](SECURITY.md).
 
 ## License
 

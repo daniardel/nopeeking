@@ -45,6 +45,12 @@ test('refuses expired links', async () => {
   assert.match(parseLink(await linkHash(), 2_000_000).error, /expired/);
 });
 
+test('marks an expired link as expired, so the page can show its asleep screen', async () => {
+  const hash = await linkHash();
+  assert.equal(parseLink(hash, 2_000_000).expired, true);
+  assert.equal(parseLink('#v=1&t=bad', 0).expired, undefined, 'a damaged link is not called expired');
+});
+
 test('reads links made by the PC side', async () => {
   const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: 'https://me.github.io/passclaude/' });
   const { link } = await phone.start({ name: 'netflix', kind: 'web', site: 'netflix.com' });

@@ -11,13 +11,17 @@ const NO_REPLY = 'No reply from your PC. Make sure Claude Code is still running 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Shows one screen. The body's data-state picks the screen's colours in style.css. */
 function show(sectionId) {
   for (const section of document.querySelectorAll('main > section')) section.hidden = section.id !== sectionId;
+  document.body.dataset.state = sectionId;
 }
 
+/** An error also shows the worried padlock beside the message. */
 function setStatus(text, isError = false) {
   $('status').textContent = text;
-  $('status').className = isError ? 'error' : '';
+  $('status-box').classList.toggle('is-error', isError);
+  $('status-face').toggleAttribute('hidden', !isError); // an <svg> has no .hidden property
 }
 
 /** An error after which this link can never work again. */
@@ -38,15 +42,24 @@ function killLink() {
   $('send').disabled = true;
 }
 
+let saved = false; // once the PC has confirmed, the countdown no longer matters
+let sending = false; // a send in flight shows the expired screen itself when it ends
+
 function tick() {
+  if (saved) return;
   const left = Math.max(0, Math.ceil((link.expiresAt - Date.now()) / 1000));
   if (left === 0) {
-    $('expires').textContent = 'This link has expired. Ask Claude for a new one.';
     killLink();
+    if (!sending) showExpired(link.req.name);
     return;
   }
-  $('expires').textContent = `Link expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  $('expires').textContent = `Expires in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   setTimeout(tick, 1000);
+}
+
+function showExpired(name) {
+  $('expired-name').textContent = name;
+  show('expired');
 }
 
 async function pollAck(key, since) {
@@ -109,12 +122,19 @@ async function send(value) {
   throw fatal(NO_REPLY);
 }
 
-if (link.error) {
+if (link.expired) {
+  showExpired(link.name);
+} else if (link.error) {
   $('problem').textContent = link.error;
   show('bad');
 } else {
+  const web = link.req.kind === 'web';
   $('name').textContent = link.req.name;
-  $('what').textContent = link.req.kind === 'web' ? `the password for ${link.req.site}` : 'an API key or token for commands';
+  $('what').textContent = web ? 'the password for' : 'an API key or token for commands';
+  $('site').textContent = link.req.site;
+  $('site').hidden = !web;
+  $('value-label').textContent = web ? 'Password' : 'Key or token';
+  $('done-what').textContent = web ? `your ${link.req.name} password` : `your ${link.req.name} key`;
   show('ask');
   tick();
 
@@ -131,13 +151,15 @@ if (link.error) {
     if (value !== $('confirm').value) return setStatus('The two entries do not match.', true);
     if (Date.now() >= link.expiresAt) {
       killLink();
-      return setStatus('This link has expired. Ask Claude for a new one.', true);
+      return showExpired(link.req.name);
     }
     $('send').disabled = true;
     setStatus('Encrypting and sending…');
+    sending = true;
     try {
       const reply = await send(value);
       if (reply.ok) {
+        saved = true;
         $('value').value = '';
         $('confirm').value = '';
         show('done');
@@ -147,11 +169,15 @@ if (link.error) {
     } catch (e) {
       setStatus(e.message, true);
       if (e.fatal) {
-        killLink();
+        killLink(); // the message says what went wrong, so it stays on screen even if the link has run out too
         return;
       }
+    } finally {
+      sending = false;
     }
+    // The link ran out while this send was waiting: now show that.
+    if (Date.now() >= link.expiresAt) return showExpired(link.req.name);
     // Send comes back only while the link is alive: never after it has expired.
-    if (!dead && Date.now() < link.expiresAt) $('send').disabled = false;
+    if (!dead) $('send').disabled = false;
   });
 }

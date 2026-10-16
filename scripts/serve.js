@@ -4,7 +4,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(process.argv[2] ?? 'docs');
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
+const types = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.woff2': 'font/woff2',
+  '.svg': 'image/svg+xml',
+  '.txt': 'text/plain; charset=utf-8',
+};
 
 http.createServer((req, res) => {
   const rel = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).replace(/^\/+/, '') || 'index.html';

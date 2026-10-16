@@ -1,0 +1,22 @@
+<!-- Generated from brand/tokens.json by `npm run brand`. Do not edit by hand. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <SolidColorBrush x:Key="Violet" Color="#5B2EFF"/>
+  <SolidColorBrush x:Key="VioletDeep" Color="#3D17D6"/>
+  <SolidColorBrush x:Key="Yellow" Color="#FFC92E"/>
+  <SolidColorBrush x:Key="Ink" Color="#17132E"/>
+  <SolidColorBrush x:Key="Paper" Color="#F3EFFF"/>
+  <SolidColorBrush x:Key="White" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="Muted" Color="#4A4370"/>
+  <SolidColorBrush x:Key="MutedOnDark" Color="#CFC6EE"/>
+  <SolidColorBrush x:Key="Lilac200" Color="#DCD3FF"/>
+  <SolidColorBrush x:Key="Lilac300" Color="#C9BCFF"/>
+  <SolidColorBrush x:Key="Mint" Color="#0E9F6E"/>
+  <SolidColorBrush x:Key="Coral" Color="#E5432A"/>
+  <CornerRadius x:Key="RadiusSm">12</CornerRadius>
+  <CornerRadius x:Key="RadiusMd">16</CornerRadius>
+  <CornerRadius x:Key="RadiusLg">24</CornerRadius>
+  <CornerRadius x:Key="RadiusPill">999</CornerRadius>
+  <Thickness x:Key="Outline">2</Thickness>
+  <Thickness x:Key="ShadowButton">5,5,0,0</Thickness>
+  <Thickness x:Key="ShadowCard">8,8,0,0</Thickness>
+</ResourceDictionary>

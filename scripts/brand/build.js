@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { lockupSvg, socialSvg } from './compose.js';
 import { ICON_SIZES, encodeIco } from './ico.js';
-import { readTokens, tokensToCss } from './tokens.js';
+import { readTokens, tokensToCss, tokensToXaml } from './tokens.js';
 import { writeAtomic } from './write.js';
 
 const root = (p) => fileURLToPath(new URL(`../../${p}`, import.meta.url));
@@ -16,6 +16,11 @@ const outlines = () => JSON.parse(read('brand/build/outlines.json'));
 async function buildCss() {
   writeAtomic(root('brand/web/tokens.css'), tokensToCss(readTokens()));
   return 'brand/web/tokens.css';
+}
+
+async function buildXaml() {
+  writeAtomic(root('src/ps/brand.xaml'), tokensToXaml(readTokens()));
+  return 'src/ps/brand.xaml';
 }
 
 async function buildLockups() {
@@ -44,7 +49,7 @@ async function buildSocial() {
   return 'brand/social-preview.png';
 }
 
-const steps = [buildCss, buildLockups, buildIcon, buildSocial];
+const steps = [buildCss, buildXaml, buildLockups, buildIcon, buildSocial];
 try {
   for (const step of steps) console.log(`wrote ${await step()}`);
 } catch (e) {

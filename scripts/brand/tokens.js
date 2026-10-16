@@ -68,3 +68,21 @@ export function tokensToCss(t) {
   out.push('}', '');
   return out.join('\n');
 }
+
+const pascal = (name) => name.replace(/(^|-)([a-z0-9])/g, (_, __, c) => c.toUpperCase());
+
+/** The WPF resource dictionary for src/ps/brand.xaml: a brush per colour, corner radii, outline and shadow offsets. */
+export function tokensToXaml(t) {
+  validateTokens(t);
+  const out = [
+    '<!-- Generated from brand/tokens.json by `npm run brand`. Do not edit by hand. -->',
+    '<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">',
+  ];
+  for (const [name, hex] of Object.entries(t.color)) out.push(`  <SolidColorBrush x:Key="${pascal(name)}" Color="${hex}"/>`);
+  for (const [name, px] of Object.entries(t.radius)) out.push(`  <CornerRadius x:Key="Radius${pascal(name)}">${px}</CornerRadius>`);
+  out.push(`  <Thickness x:Key="Outline">${t.outline}</Thickness>`);
+  // A shadow is drawn as an ink copy of the shape behind it, pushed right and down by this margin.
+  for (const [name, s] of Object.entries(t.shadow)) out.push(`  <Thickness x:Key="Shadow${pascal(name)}">${s.x},${s.y},0,0</Thickness>`);
+  out.push('</ResourceDictionary>', '');
+  return out.join('\n');
+}

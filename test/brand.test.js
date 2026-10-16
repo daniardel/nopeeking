@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readTokens, tokensToCss, validateTokens } from '../scripts/brand/tokens.js';
+import { readTokens, tokensToCss, tokensToXaml, validateTokens } from '../scripts/brand/tokens.js';
 import { writeAtomic } from '../scripts/brand/write.js';
 import { ICON_SIZES, decodeIco, encodeIco, pngSize } from '../scripts/brand/ico.js';
 import { lockupSvg, svgInner } from '../scripts/brand/compose.js';
@@ -188,4 +188,19 @@ test('the npm package ships assets/ and leaves the brand sources out', () => {
     for (const file of Object.values(f.files)) assert.ok(paths.includes(`assets/fonts/${file}.ttf`), file);
   }
   assert.deepEqual(paths.filter((p) => p.startsWith('brand/') || p.startsWith('scripts/')), []);
+});
+
+test('src/ps/brand.xaml is up to date with brand/tokens.json', () => {
+  assert.equal(lf(readFileSync(root('src/ps/brand.xaml'), 'utf8')), tokensToXaml(readTokens()), 'run `npm run brand`');
+});
+
+test('brand.xaml gives WPF a brush per colour and the shape tokens, keyed in PascalCase', () => {
+  const xaml = tokensToXaml(readTokens());
+  assert.match(xaml, /<SolidColorBrush x:Key="Violet" Color="#5B2EFF"\/>/);
+  assert.match(xaml, /<SolidColorBrush x:Key="MutedOnDark" Color="#CFC6EE"\/>/);
+  assert.match(xaml, /<SolidColorBrush x:Key="Lilac200" Color="#DCD3FF"\/>/);
+  assert.match(xaml, /<CornerRadius x:Key="RadiusMd">16<\/CornerRadius>/);
+  assert.match(xaml, /<Thickness x:Key="Outline">2<\/Thickness>/);
+  assert.match(xaml, /<Thickness x:Key="ShadowButton">5,5,0,0<\/Thickness>/);
+  assert.doesNotMatch(xaml, /\r/);
 });

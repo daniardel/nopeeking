@@ -43,13 +43,15 @@ function killLink() {
 }
 
 let saved = false; // once the PC has confirmed, the countdown no longer matters
+let failed = false; // after an error the link can't recover from, its message stays and the countdown is gone
 let sending = false; // a send in flight shows the expired screen itself when it ends
 
 function tick() {
-  if (saved) return;
+  if (saved || failed) return;
   const left = Math.max(0, Math.ceil((link.expiresAt - Date.now()) / 1000));
   if (left === 0) {
     killLink();
+    $('expires').textContent = 'Expired';
     if (!sending) showExpired(link.req.name);
     return;
   }
@@ -170,6 +172,8 @@ if (link.expired) {
       setStatus(e.message, true);
       if (e.fatal) {
         killLink(); // the message says what went wrong, so it stays on screen even if the link has run out too
+        failed = true;
+        $('expires-badge').hidden = true;
         return;
       }
     } finally {

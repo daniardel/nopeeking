@@ -42,6 +42,16 @@ test('notifyTyped starts the toast without waiting for it, and swallows its fail
   await new Promise((r) => setImmediate(r));
 });
 
+test('a new typed notification replaces the one still showing, so they never stack', () => {
+  const signals = [];
+  const ops = createWinOps({ run: (script, args, stdin, opts) => { signals.push(opts.signal); return new Promise(() => {}); } });
+  ops.notifyTyped({ name: 'netflix', site: 'netflix.com' });
+  assert.equal(signals[0].aborted, false);
+  ops.notifyTyped({ name: 'hulu', site: 'hulu.com' });
+  assert.equal(signals[0].aborted, true, 'the first note is closed');
+  assert.equal(signals[1].aborted, false, 'the second one stays');
+});
+
 test('notifyTyped does nothing when notifications are off', () => {
   const calls = [];
   createWinOps({ run: async (...a) => calls.push(a), notify: false }).notifyTyped({ name: 'netflix', site: 'netflix.com' });

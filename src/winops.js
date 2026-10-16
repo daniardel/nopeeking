@@ -4,6 +4,7 @@ import { encodeQr, qrPathData } from './qr.js';
 import { runPs, EXIT } from './windows.js';
 
 export function createWinOps({ run = runPs, notify = true } = {}) {
+  let lastToast = null; // closes the note still showing when the next one opens, so they never stack
   return {
     /** Every Chrome window with the text in its address bar. */
     async chromeWindows() {
@@ -44,7 +45,9 @@ export function createWinOps({ run = runPs, notify = true } = {}) {
     /** Shows "passClaude typed your … password" in the corner for a few seconds. Never waits for it, never throws. */
     notifyTyped({ name, site }) {
       if (!notify) return;
-      run('toast.ps1', [], JSON.stringify({ name, site }), { timeoutMs: 20_000 }).catch(() => {});
+      lastToast?.abort();
+      lastToast = new AbortController();
+      run('toast.ps1', [], JSON.stringify({ name, site }), { timeoutMs: 20_000, signal: lastToast.signal }).catch(() => {});
     },
   };
 }

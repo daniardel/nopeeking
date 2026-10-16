@@ -35,7 +35,7 @@ export function parseLink(hash, now = Date.now()) {
 
   const expiresAt = Number(p.get('e')) * 1000;
   if (!Number.isFinite(expiresAt) || expiresAt <= 0) return DAMAGED;
-  if (now >= expiresAt) return { error: 'This link has expired. Ask Claude for a new one.' };
+  if (now >= expiresAt) return { error: 'This link has expired. Ask Claude for a new one.', expired: true, name };
 
   return { req: { topic, name, kind, site }, pcKey, relay: relay.href.replace(/\/+$/, ''), expiresAt };
 }

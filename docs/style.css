@@ -1,0 +1,226 @@
+/* The phone page. Colours, fonts and shadows come from brand/tokens.css (copied from brand/web by `npm run brand`). */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--pc-violet);
+  color: var(--pc-ink);
+  font: 17px/1.45 var(--pc-font-body);
+}
+body[data-state="done"] { background: var(--pc-yellow); }
+body[data-state="expired"], body[data-state="bad"] { background: var(--pc-ink); color: var(--pc-white); }
+
+main {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+h1 {
+  margin: 0;
+  font-family: var(--pc-font-display);
+  font-weight: 800;
+  font-size: 46px;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+p { margin: 0; }
+
+/* Brand row, on every screen */
+.brand {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 22px 0;
+  color: var(--pc-white);
+}
+body[data-state="done"] .brand { color: var(--pc-ink); }
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--pc-font-display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.mark-on-light { display: none; }
+body[data-state="done"] .mark-on-dark { display: none; }
+body[data-state="done"] .mark-on-light { display: block; }
+
+.expires {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--pc-radius-pill);
+  background: var(--pc-yellow);
+  color: var(--pc-ink);
+  font-family: var(--pc-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+body[data-state="ask"] .expires { display: flex; }
+
+#loading { padding: 22px; color: var(--pc-white); }
+
+/* Ask: violet hero over a white sheet */
+#ask { flex: 1; display: flex; flex-direction: column; }
+.hero {
+  position: relative;
+  padding: 22px 22px 30px;
+  color: var(--pc-white);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.halo { position: absolute; right: -110px; top: -150px; pointer-events: none; }
+.lede { position: relative; font-size: 15px; }
+.hero h1 { position: relative; }
+.what { position: relative; font-size: 16px; }
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--pc-radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+  font-family: var(--pc-font-mono);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.sheet {
+  position: relative;
+  flex: 1;
+  background: var(--pc-white);
+  border-radius: 30px 30px 0 0;
+  padding: 28px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+form { display: flex; flex-direction: column; }
+label { display: block; margin: 16px 0 8px; font-size: 14px; font-weight: 700; }
+label:first-child { margin-top: 0; }
+input[type="password"], input[type="text"] {
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  border: var(--pc-outline) solid var(--pc-lilac-300);
+  border-radius: 14px;
+  background: var(--pc-paper);
+  color: var(--pc-ink);
+  font: 20px var(--pc-font-body);
+  letter-spacing: 0.14em;
+}
+input[type="text"] { letter-spacing: 0.02em; }
+input[type="password"]:focus, input[type="text"]:focus {
+  outline: none;
+  border-color: var(--pc-violet);
+  background: var(--pc-white);
+  box-shadow: 0 0 0 4px var(--pc-lilac-200);
+}
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--pc-muted);
+}
+label.check input { width: 22px; height: 22px; margin: 0; accent-color: var(--pc-violet); }
+
+#send {
+  margin-top: 12px;
+  height: 60px;
+  border: var(--pc-outline) solid var(--pc-ink);
+  border-radius: var(--pc-radius-md);
+  background: var(--pc-violet);
+  color: var(--pc-white);
+  box-shadow: var(--pc-shadow-button);
+  font: 800 19px var(--pc-font-display);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+}
+#send:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 2px 2px 0 var(--pc-ink); }
+#send:focus-visible { outline: 3px solid var(--pc-violet-deep); outline-offset: 3px; }
+#send:disabled { opacity: 0.5; cursor: default; }
+
+.status-box { display: flex; align-items: center; gap: 12px; min-height: 1.45em; color: var(--pc-muted); }
+.status-box.is-error {
+  padding: 12px 14px;
+  border: var(--pc-outline) solid var(--pc-coral);
+  border-radius: var(--pc-radius-md);
+  color: var(--pc-ink);
+  font-weight: 500;
+}
+.status-box svg { flex: none; }
+
+.note {
+  margin-top: auto;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--pc-radius-md);
+  background: var(--pc-paper);
+  color: var(--pc-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.note svg { flex: none; margin-top: 1px; }
+
+/* Full-screen states: saved, expired, damaged */
+.screen { position: relative; flex: 1; display: flex; flex-direction: column; padding: 0 22px 22px; }
+.screen-body { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 24px 0; }
+.screen-body.center { align-items: center; text-align: center; gap: 18px; }
+.screen-body.center p { max-width: 300px; font-size: 18px; }
+.screen-foot { position: relative; display: flex; flex-direction: column; gap: 12px; }
+.face { flex: none; }
+.huge { font-size: 72px; line-height: 0.9; letter-spacing: -0.045em; }
+.soft { font-size: 17px; line-height: 1.5; color: var(--pc-muted-on-dark); }
+.confetti { position: absolute; left: 0; top: 50px; pointer-events: none; }
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--pc-white);
+  color: var(--pc-ink);
+  border: var(--pc-outline) solid var(--pc-ink);
+  border-radius: 18px;
+  box-shadow: var(--pc-shadow-button);
+}
+.card-yellow { background: var(--pc-yellow); border-color: var(--pc-yellow); box-shadow: none; padding: 18px; }
+.label {
+  font-family: var(--pc-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pc-muted);
+}
+.card-yellow .label { color: var(--pc-ink); }
+.big { font: 800 21px/1.25 var(--pc-font-display); overflow-wrap: anywhere; }
+.close { text-align: center; font-size: 14px; color: var(--pc-ink); }

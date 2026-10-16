@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "test": "node --test",
-    "brand": "node scripts/brand/build.js"
+    "brand": "node scripts/brand/build.js && node scripts/brand/phone.js"
   },
   "keywords": [
     "claude",

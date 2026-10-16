@@ -1,0 +1,74 @@
+/* Generated from brand/tokens.json by `npm run brand`. Do not edit by hand. */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/BricolageGrotesque-ExtraBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/DMSans-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/DMSans-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/DMSans-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/JetBrainsMono-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('fonts/JetBrainsMono-Bold.woff2') format('woff2');
+}
+
+:root {
+  --pc-violet: #5B2EFF;
+  --pc-violet-deep: #3D17D6;
+  --pc-yellow: #FFC92E;
+  --pc-ink: #17132E;
+  --pc-paper: #F3EFFF;
+  --pc-white: #FFFFFF;
+  --pc-muted: #4A4370;
+  --pc-muted-on-dark: #CFC6EE;
+  --pc-lilac-200: #DCD3FF;
+  --pc-lilac-300: #C9BCFF;
+  --pc-mint: #0E9F6E;
+  --pc-coral: #E5432A;
+  --pc-radius-sm: 12px;
+  --pc-radius-md: 16px;
+  --pc-radius-lg: 24px;
+  --pc-radius-pill: 999px;
+  --pc-outline: 2px;
+  --pc-shadow-button: 5px 5px 0 var(--pc-ink);
+  --pc-shadow-card: 8px 8px 0 var(--pc-ink);
+  --pc-font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --pc-font-body: 'DM Sans', system-ui, sans-serif;
+  --pc-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}

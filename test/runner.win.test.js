@@ -43,9 +43,11 @@ test('reports exit codes and stderr', { skip }, async () => {
 });
 
 test('runs in the given working directory', { skip }, async () => {
-  const dir = fs.realpathSync(os.tmpdir());
+  // The native realpath expands 8.3 short names: on GitHub's runners the temp folder is C:\Users\RUNNER~1\..., and PowerShell
+  // reports the long name.
+  const dir = fs.realpathSync.native(os.tmpdir());
   const r = await runCommand({ command: '(Get-Location).Path', cwd: dir });
-  assert.equal(r.stdout.trim().toLowerCase(), dir.toLowerCase());
+  assert.equal(fs.realpathSync.native(r.stdout.trim()).toLowerCase(), dir.toLowerCase());
 });
 
 test('stops commands that run past the timeout', { skip }, async () => {

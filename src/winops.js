@@ -1,4 +1,6 @@
-// Windows-side Chrome checks, typing and the typed notification, via src/ps/focus.ps1, type.ps1 and toast.ps1.
+// Windows-side Chrome checks, typing, the typed notification and the QR window, via src/ps/focus.ps1, type.ps1, toast.ps1
+// and qr.ps1.
+import { encodeQr, qrPathData } from './qr.js';
 import { runPs, EXIT } from './windows.js';
 
 export function createWinOps({ run = runPs, notify = true } = {}) {
@@ -25,6 +27,17 @@ export function createWinOps({ run = runPs, notify = true } = {}) {
       const word = res.stdout.trim();
       if (res.code === EXIT.OK && word === 'TYPED') return 'TYPED';
       return word || `EXIT_${res.code}`;
+    },
+
+    /**
+     * Shows the phone link as a QR code in a window on the PC, until the link expires or signal aborts (the server aborts
+     * it once the secret arrives). Never waits for it, never throws. The code is drawn here and sent as path data.
+     */
+    showQr({ name, kind, site, link, expiresAt, signal }) {
+      const matrix = encodeQr(link);
+      const stdin = JSON.stringify({ name, kind, site: site ?? '', link, expiresAt, path: qrPathData(matrix), modules: matrix.length + 8 });
+      const timeoutMs = Math.max(0, expiresAt - Date.now()) + 10_000;
+      run('qr.ps1', [], stdin, { timeoutMs, signal }).catch(() => {});
     },
 
     /** Shows "passClaude typed your … password" in the corner for a few seconds. Never waits for it, never throws. */

@@ -32,3 +32,18 @@ test('runPs ignores a powershell.exe planted in the current directory', { skip }
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runPs stops the script when its signal aborts', { skip }, async () => {
+  const controller = new AbortController();
+  const started = Date.now();
+  const running = runPs('cred.ps1', ['list'], '', { signal: controller.signal });
+  setTimeout(() => controller.abort(), 50); // well before PowerShell has even started the script
+  const res = await running;
+  assert.equal(res.code, -1);
+  assert.ok(Date.now() - started < 5_000);
+});
+
+test('runPs does not start anything for a signal that has already aborted', async () => {
+  const res = await runPs('cred.ps1', ['list'], '', { signal: AbortSignal.abort() });
+  assert.deepEqual(res, { code: -1, stdout: '', stderr: '' });
+});

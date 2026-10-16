@@ -1,16 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { POWERSHELL_EXE } from '../src/windows.js';
+import jsQR from 'jsqr';
+import sharp from 'sharp';
 import { pngSize } from '../scripts/brand/ico.js';
+import { encodeQr, qrPathData } from '../src/qr.js';
 
 const skip = process.platform !== 'win32';
 const PS_DIR = fileURLToPath(new URL('../src/ps/', import.meta.url));
 const RENDER = fileURLToPath(new URL('./fixtures/render-ui.ps1', import.meta.url));
+const RENDER_QR = fileURLToPath(new URL('./fixtures/render-qr.ps1', import.meta.url));
 const ps = (args) => execFileSync(POWERSHELL_EXE, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', ...args], { encoding: 'utf8' });
 
 test('the save-a-secret window draws in the brand fonts, in each of its states', { skip }, () => {
@@ -47,6 +51,26 @@ test('the typed notification says what was typed where, stays on top and never t
     assert.equal(report.toastInTaskbar, false);
     const { width, height } = pngSize(readFileSync(join(dir, 'toast.png')));
     assert.ok(width >= 600 && height >= 150, `toast.png is ${width}×${height}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the QR window shows a code a phone can scan back to exactly the link, with a countdown', { skip }, async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pc-ui-'));
+  try {
+    const link = 'https://daniardel.github.io/passclaude-phone/#v=1&t=pc-abc&k=' + 'Bx9'.repeat(29) + '&n=netflix&kind=web&s=netflix.com&e=1792160000';
+    const matrix = encodeQr(link);
+    const request = join(dir, 'request.json');
+    writeFileSync(request, JSON.stringify({
+      name: 'netflix', kind: 'web', site: 'netflix.com', link, expiresAt: Date.now() + 299_000, path: qrPathData(matrix), modules: matrix.length + 8,
+    }));
+    const report = JSON.parse(ps(['-File', RENDER_QR, '-Out', dir, '-Request', request]).trim().split('\n').pop());
+    assert.equal(report.heading, 'Scan with your phone');
+    assert.equal(report.what, 'to save your netflix password');
+    assert.match(report.countdown, /^Expires in 4:5\d$/);
+    const { data, info } = await sharp(join(dir, 'qr.png')).flatten({ background: '#ffffff' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    assert.equal(jsQR(new Uint8ClampedArray(data), info.width, info.height)?.data, link);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

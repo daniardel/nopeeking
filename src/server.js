@@ -38,7 +38,10 @@ const TOOLS = {
   },
   add_secret_from_phone: {
     description: 'Save a new secret from the user\'s phone. Returns a one-time link right away: show it to the user, who opens it on their phone and types the secret there (end-to-end encrypted; you never see it). Send the link, then end your turn: the user may only see your message once your turn ends. When they say they sent it, call check_phone_secret.',
-    inputSchema: newSecret,
+    inputSchema: {
+      ...newSecret,
+      show_qr: z.boolean().optional().describe('true when the user is at this PC but wants to type the secret on their phone: a window on the PC also shows the link as a QR code to scan. Leave it out when the user is away from the PC.'),
+    },
   },
   check_phone_secret: {
     description: 'Wait up to 50 seconds for the secret the user is sending from their phone link. Call again while it says it is still waiting.',

@@ -27,11 +27,12 @@ async function setup({
   const vault = memoryVault({ popupValue });
   await vault.put('netflix', { kind: 'web', site: 'netflix.com', created: '2026-10-13T00:00:00.000Z' }, WEB);
   await vault.put('github', { kind: 'command', created: '2026-10-13T00:00:00.000Z' }, CMD);
-  const calls = { typed: [], started: [], runs: [], forgotten: [], notified: [] };
+  const calls = { typed: [], started: [], runs: [], forgotten: [], notified: [], qr: [] };
   const win = {
     chromeWindows: async () => windows,
     typeInto: async (name, hwnd, url) => { calls.typed.push({ name, hwnd, url }); return typeResult; },
     notifyTyped: (what) => { calls.notified.push(what); if (notify === 'throws') throw new Error('no toast'); },
+    showQr: (what) => { calls.qr.push(what); if (notify === 'throws') throw new Error('no window'); },
   };
   const phone = {
     start: async (req) => {
@@ -109,6 +110,30 @@ test('type_secret types web secrets and explains refusals', async () => {
   const wrongSite = await setup({ windows: [{ hwnd: '1', url: 'evil.com/login', foreground: true }] });
   await assert.rejects(wrongSite.tools.type_secret({ name: 'netflix' }), /Site lock/);
   assert.equal(wrongSite.calls.typed.length, 0);
+});
+
+test('add_secret_from_phone opens a QR window only when asked, and closes it once the link is done', async () => {
+  const { tools, calls } = await setup({ phoneStatus: 'saved' });
+  const out = await tools.add_secret_from_phone({ name: 'hulu', kind: 'web', site: 'hulu.com', show_qr: true });
+  assert.equal(calls.qr.length, 1);
+  const shown = calls.qr[0];
+  assert.equal(shown.link, 'https://me.github.io/passclaude/#v=1&t=pc-test');
+  assert.deepEqual([shown.name, shown.kind, shown.site], ['hulu', 'web', 'hulu.com']);
+  assert.ok(shown.expiresAt > Date.now());
+  assert.match(out, /QR code/);
+  assert.match(out, /https:\/\/me\.github\.io\/passclaude\/#v=1&t=pc-test/, 'the link is still in the reply, to tap instead');
+  await new Promise((r) => setImmediate(r));
+  assert.equal(shown.signal.aborted, true, 'the phone check came back saved, so the window closes');
+
+  const plain = await setup();
+  const without = await plain.tools.add_secret_from_phone({ name: 'hulu', kind: 'web', site: 'hulu.com' });
+  assert.equal(plain.calls.qr.length, 0);
+  assert.doesNotMatch(without, /QR code/);
+
+  const broken = await setup({ notify: 'throws' });
+  const still = await broken.tools.add_secret_from_phone({ name: 'hulu', kind: 'web', site: 'hulu.com', show_qr: true });
+  assert.match(still, /https:\/\/me\.github\.io/);
+  assert.doesNotMatch(still, /QR code/, 'no window, so no mention of one');
 });
 
 test('type_secret shows the typed notification only after typing, and never fails because of it', async () => {

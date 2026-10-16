@@ -44,7 +44,7 @@ function New-PromptWindow([string]$Name, [string]$Kind, [string]$Site) {
             <WrapPanel Margin="0,4,0,0">
               <TextBlock x:Name="What" FontSize="15" Foreground="{DynamicResource Muted}" VerticalAlignment="Center"/>
               <TextBlock x:Name="SecretName" FontSize="15" FontWeight="Bold" Margin="4,0,0,0" VerticalAlignment="Center"/>
-              <Border x:Name="SitePill" Margin="8,0,0,0" Padding="8,2" CornerRadius="999" Background="{DynamicResource Paper}" VerticalAlignment="Center">
+              <Border x:Name="SitePill" Margin="8,0,0,0" Padding="8,2" CornerRadius="14" Background="{DynamicResource Paper}" VerticalAlignment="Center">
                 <TextBlock x:Name="Site" FontFamily="{DynamicResource FontMono}" FontWeight="Medium" FontSize="12" Foreground="{DynamicResource VioletDeep}"/>
               </Border>
             </WrapPanel>

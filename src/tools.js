@@ -62,16 +62,31 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
         : `Saved "${name}". Use run_with_secret to use it in commands.`;
     },
 
-    async add_secret_from_phone({ name, kind, site }) {
+    async add_secret_from_phone({ name, kind, site, show_qr: showQr = false }) {
       checkName(name);
       const meta = newMeta({ kind, site });
       const { link, expiresAt } = await phone.start({ name, kind: meta.kind, site: meta.site });
       const minutes = Math.max(1, Math.round((expiresAt - now()) / 60_000));
+      let qrShown = false;
+      if (showQr) {
+        const done = new AbortController();
+        try {
+          win.showQr({ name, kind: meta.kind, site: meta.site, link, expiresAt, signal: done.signal });
+          qrShown = true;
+        } catch {
+          // No window: the link in the reply still works.
+        }
+        // Close the window once the link is used or expires, whichever comes first.
+        if (qrShown) phone.check(name, Math.max(0, expiresAt - now()) + 1_000).finally(() => done.abort());
+      }
       return [
         'Show the user this one-time link and ask them to open it on their phone:',
         '',
         link,
         '',
+        ...(qrShown
+          ? ['A window on the PC also shows this link as a QR code: the user can scan it with their phone camera. It closes once the secret arrives or the link expires.']
+          : []),
         `They type ${meta.kind === 'web' ? `the password for ${meta.site}` : 'the secret'} there. It is encrypted on the phone, so you never see it.`,
         `The link works once and expires in ${minutes} minutes.`,
         'Put the whole link in your reply, then end your turn and ask the user to say when they have sent it. Do not wait for it',

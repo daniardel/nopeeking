@@ -12,7 +12,8 @@ export const POWERSHELL_EXE = path.join(process.env.SystemRoot || 'C:\\Windows',
 // Exit codes shared with the scripts in src/ps/.
 export const EXIT = { OK: 0, NOT_FOUND: 3, EXISTS: 4, TOO_LONG: 5, CANCELLED: 6, REFUSED: 7 };
 
-export function runPs(script, args = [], stdin = '', { timeoutMs = 30_000 } = {}) {
+export function runPs(script, args = [], stdin = '', { timeoutMs = 30_000, signal } = {}) {
+  if (signal?.aborted) return Promise.resolve({ code: -1, stdout: '', stderr: '' });
   return new Promise((resolve, reject) => {
     const child = spawn(
       POWERSHELL_EXE,
@@ -25,12 +26,16 @@ export function runPs(script, args = [], stdin = '', { timeoutMs = 30_000 } = {}
     child.stderr.on('data', (d) => err.push(d));
     child.stdin.on('error', () => {});
     const timer = setTimeout(() => child.kill(), timeoutMs);
+    const stop = () => child.kill();
+    signal?.addEventListener('abort', stop, { once: true });
     child.on('error', (e) => {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', stop);
       reject(e);
     });
     child.on('close', (code) => {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', stop);
       resolve({
         code: code ?? -1,
         stdout: Buffer.concat(out).toString('utf8').replace(/^\uFEFF/, ''),

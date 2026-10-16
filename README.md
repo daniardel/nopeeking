@@ -1,8 +1,20 @@
-# passClaude
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/logo/lockup-on-violet.svg">
+    <img src="brand/logo/lockup.svg" alt="passClaude" width="420">
+  </picture>
+</p>
 
-**Let Claude Code log into websites and use your API keys without ever seeing them.**
+<h3 align="center">Claude logs you in. Its eyes stay shut.</h3>
 
-[![npm](https://img.shields.io/npm/v/passclaude)](https://www.npmjs.com/package/passclaude) [![tests](https://github.com/daniardel/passclaude/actions/workflows/test.yml/badge.svg)](https://github.com/daniardel/passclaude/actions/workflows/test.yml) [![license](https://img.shields.io/npm/l/passclaude)](LICENSE)
+<p align="center">Let Claude Code log into websites and use your API keys without ever seeing them.</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/passclaude"><img src="https://img.shields.io/npm/v/passclaude?color=5B2EFF" alt="npm"></a>
+  <a href="https://github.com/daniardel/passclaude/actions/workflows/test.yml"><img src="https://github.com/daniardel/passclaude/actions/workflows/test.yml/badge.svg" alt="tests"></a>
+  <img src="https://img.shields.io/badge/platform-Windows-17132E" alt="platform: Windows">
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/passclaude?color=FFC92E" alt="license"></a>
+</p>
 
 You never paste a password into the chat. You type it once, into a popup on your PC or a one-time encrypted link on your phone. After that Claude can *use* it, but passClaude's tools never return the value, so it stays out of the conversation, the transcript and the model. There are a few ways it can still get out: read "Not protected" below.
 
@@ -10,6 +22,8 @@ You never paste a password into the chat. You type it once, into a popup on your
 - **API keys in commands:** Claude runs the command, the key goes in as an environment variable or is typed into a login prompt, and it is masked in the output.
 - **Works from your phone** with Claude Code Remote Control, including saving new secrets.
 - **Free and open source.** No password manager, no account. Windows.
+
+passClaude is an independent project. It is not made by or affiliated with Anthropic.
 
 ## Install
 
@@ -106,7 +120,7 @@ The hook covers Claude Code's Bash and PowerShell tools and also passClaude's ow
 | `PASSCLAUDE_NTFY_URL` | `https://ntfy.sh` | Relay for phone links. Point it at your own [ntfy](https://docs.ntfy.sh/install/) server if you like. |
 | `PASSCLAUDE_PAGE_URL` | `https://daniardel.github.io/passclaude-phone/` | Where phone links open. Host the page yourself and point this at it. |
 
-A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `app.js`, `link.js` and `e2e.js` from the `docs/` folder of the GitHub repo. The npm package only ships `docs/e2e.js`.
+A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `style.css`, `app.js`, `link.js`, `e2e.js` and the `brand` folder from the `docs/` folder of the GitHub repo. The page loads nothing from other sites, fonts included. The npm package only ships `docs/e2e.js`.
 
 Example:
 
@@ -166,7 +180,9 @@ npm test
 
 To try your copy in Claude Code: `claude mcp add --scope user passclaude -- node "<this folder>\src\cli.js"`.
 
-The phone page is `docs/index.html`, `docs/app.js`, `docs/link.js` and `docs/e2e.js`. The live copy is in the public [passclaude-phone](https://github.com/daniardel/passclaude-phone) repo. After changing any of these files, copy them there and push, or phone links keep opening the old page.
+The phone page is `docs/index.html`, `docs/style.css`, `docs/app.js`, `docs/link.js`, `docs/e2e.js` and `docs/brand/`. The live copy is in the public [passclaude-phone](https://github.com/daniardel/passclaude-phone) repo. After changing any of these files, copy them there and push, or phone links keep opening the old page. To try it locally: `node scripts/serve.js docs`.
+
+The look (colours, fonts, the padlock) lives in [`brand/`](brand/README.md). After changing it, run `npm run brand` and commit what it writes; it also refreshes `docs/brand/`.
 
 ## Reporting a security problem
 

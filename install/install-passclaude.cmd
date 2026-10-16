@@ -7,6 +7,10 @@ rem Full paths, and never look in the current folder for programs: a double-clic
 rem (often Downloads), where a planted powershell.exe, cmd.exe, node.exe or claude.exe must never run.
 set "NoDefaultCurrentDirectoryInExePath=1"
 set "PASSCLAUDE_INSTALLER=%~f0"
+rem Test mode (passClaude's own tests) draws the screens into a folder and installs nothing. Only an argument turns it
+rem on, never a variable left over from somewhere else.
+set "PASSCLAUDE_INSTALLER_TEST="
+if "%~1"=="--render-screens" set "PASSCLAUDE_INSTALLER_TEST=%~2"
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create([IO.File]::ReadAllText($env:PASSCLAUDE_INSTALLER)))"
 exit /b %errorlevel%
 #>
@@ -366,7 +370,8 @@ function Save-WindowPng($Window, [string]$Path) {
   try { $encoder.Save($stream) } finally { $stream.Dispose() }
 }
 
-# Test mode (used by passClaude's own tests): draw every screen into the folder and change nothing.
+# Test mode (install-passclaude.cmd --render-screens <folder>, used by passClaude's own tests): draw every screen into
+# the folder and change nothing.
 if ($env:PASSCLAUDE_INSTALLER_TEST) {
   $screens = 'checking', 'ready', 'missing-node', 'missing-claude', 'working', 'done', 'already', 'failed'
   foreach ($screen in $screens) {

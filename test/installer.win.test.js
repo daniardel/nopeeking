@@ -12,9 +12,8 @@ const INSTALLER = fileURLToPath(new URL('../install/install-passclaude.cmd', imp
 
 /** Runs the real .cmd through cmd.exe in test mode: it draws its screens into dir and changes nothing. */
 function renderInstaller(dir) {
-  const out = execFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'), ['/d', '/c', INSTALLER], {
+  const out = execFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'), ['/d', '/c', INSTALLER, '--render-screens', dir], {
     encoding: 'utf8',
-    env: { ...process.env, PASSCLAUDE_INSTALLER_TEST: dir },
     timeout: 60_000,
   });
   return JSON.parse(out.trim().split(/\r?\n/).pop());
@@ -59,12 +58,12 @@ test('a powershell.exe planted next to the installer (say in Downloads) is never
     copyFileSync(INSTALLER, copy);
     // Any program will do as the plant: whoami prints a user name, which is not the JSON the real script prints.
     copyFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'whoami.exe'), join(dir, 'powershell.exe'));
-    const out = execFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'), ['/d', '/c', copy], {
+    const out = execFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'cmd.exe'), ['/d', '/c', copy, '--render-screens', dir], {
       cwd: dir, // a double-click starts the file in its own folder
       encoding: 'utf8',
       // Without this variable at all (any value, even empty, switches the protection on), as on a normal PC.
       env: Object.fromEntries(
-        Object.entries({ ...process.env, PASSCLAUDE_INSTALLER_TEST: dir }).filter(([k]) => k.toLowerCase() !== 'nodefaultcurrentdirectoryinexepath'),
+        Object.entries(process.env).filter(([k]) => k.toLowerCase() !== 'nodefaultcurrentdirectoryinexepath'),
       ),
       timeout: 60_000,
     });
@@ -79,6 +78,14 @@ test('the installer starts cmd.exe by full path, from the user profile, and stop
   assert.match(text, /Join-Path \$env:SystemRoot 'System32\\cmd\.exe'/);
   assert.match(text, /WorkingDirectory = \$env:USERPROFILE/);
   assert.match(text, /set "NoDefaultCurrentDirectoryInExePath=1"/, 'node and claude are not looked up in the current folder');
+});
+
+test('test mode comes only from an argument, which a double-click never passes, not from an inherited variable', () => {
+  const batch = readFileSync(INSTALLER, 'utf8').split('#>')[0];
+  const clear = batch.indexOf('set "PASSCLAUDE_INSTALLER_TEST="');
+  const fromArg = batch.indexOf('if "%~1"=="--render-screens" set "PASSCLAUDE_INSTALLER_TEST=%~2"');
+  assert.ok(clear > 0, 'the batch part clears any PASSCLAUDE_INSTALLER_TEST it inherits');
+  assert.ok(fromArg > clear, 'and only then sets it from --render-screens <folder>');
 });
 
 test('the installer gives up on a step after 60 seconds', { skip }, () => {

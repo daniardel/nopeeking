@@ -71,7 +71,7 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
       if (showQr) {
         const done = new AbortController();
         try {
-          win.showQr({ name, kind: meta.kind, site: meta.site, link, expiresAt, signal: done.signal });
+          win.showQr({ name, kind: meta.kind, link, expiresAt, signal: done.signal });
           qrShown = true;
         } catch {
           // No window: the link in the reply still works.

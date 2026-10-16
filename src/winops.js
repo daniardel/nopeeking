@@ -33,9 +33,10 @@ export function createWinOps({ run = runPs, notify = true } = {}) {
      * Shows the phone link as a QR code in a window on the PC, until the link expires or signal aborts (the server aborts
      * it once the secret arrives). Never waits for it, never throws. The code is drawn here and sent as path data.
      */
-    showQr({ name, kind, site, link, expiresAt, signal }) {
+    showQr({ name, kind, link, expiresAt, signal }) {
+      // Only the drawn code crosses to PowerShell: the link (and the key in it) stays in Node.
       const matrix = encodeQr(link);
-      const stdin = JSON.stringify({ name, kind, site: site ?? '', link, expiresAt, path: qrPathData(matrix), modules: matrix.length + 8 });
+      const stdin = JSON.stringify({ name, kind, expiresAt, path: qrPathData(matrix), modules: matrix.length + 8 });
       const timeoutMs = Math.max(0, expiresAt - Date.now()) + 10_000;
       run('qr.ps1', [], stdin, { timeoutMs, signal }).catch(() => {});
     },

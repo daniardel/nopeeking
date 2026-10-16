@@ -118,7 +118,7 @@ test('add_secret_from_phone opens a QR window only when asked, and closes it onc
   assert.equal(calls.qr.length, 1);
   const shown = calls.qr[0];
   assert.equal(shown.link, 'https://me.github.io/passclaude/#v=1&t=pc-test');
-  assert.deepEqual([shown.name, shown.kind, shown.site], ['hulu', 'web', 'hulu.com']);
+  assert.deepEqual([shown.name, shown.kind], ['hulu', 'web']);
   assert.ok(shown.expiresAt > Date.now());
   assert.match(out, /QR code/);
   assert.match(out, /https:\/\/me\.github\.io\/passclaude\/#v=1&t=pc-test/, 'the link is still in the reply, to tap instead');

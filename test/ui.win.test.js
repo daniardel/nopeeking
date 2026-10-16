@@ -63,7 +63,7 @@ test('the QR window shows a code a phone can scan back to exactly the link, with
     const matrix = encodeQr(link);
     const request = join(dir, 'request.json');
     writeFileSync(request, JSON.stringify({
-      name: 'netflix', kind: 'web', site: 'netflix.com', link, expiresAt: Date.now() + 299_000, path: qrPathData(matrix), modules: matrix.length + 8,
+      name: 'netflix', kind: 'web', expiresAt: Date.now() + 299_000, path: qrPathData(matrix), modules: matrix.length + 8,
     }));
     const report = JSON.parse(ps(['-File', RENDER_QR, '-Out', dir, '-Request', request]).trim().split('\n').pop());
     assert.equal(report.heading, 'Scan with your phone');
@@ -85,7 +85,7 @@ test('a very long link (long name, long site, own relay) still fits the QR windo
     assert.ok(link.length >= 400, `${link.length} characters`);
     const matrix = encodeQr(link);
     const request = join(dir, 'request.json');
-    writeFileSync(request, JSON.stringify({ name, kind: 'web', site, link, expiresAt: Date.now() + 299_000, path: qrPathData(matrix), modules: matrix.length + 8 }));
+    writeFileSync(request, JSON.stringify({ name, kind: 'web', expiresAt: Date.now() + 299_000, path: qrPathData(matrix), modules: matrix.length + 8 }));
     ps(['-File', RENDER_QR, '-Out', dir, '-Request', request]);
     const { data, info } = await sharp(join(dir, 'qr.png')).flatten({ background: '#ffffff' }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     assert.equal(jsQR(new Uint8ClampedArray(data), info.width, info.height)?.data, link);

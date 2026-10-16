@@ -48,7 +48,7 @@ test('notifyTyped does nothing when notifications are off', () => {
   assert.deepEqual(calls, []);
 });
 
-test('showQr opens the QR window with the link, until the link expires or the signal aborts', async () => {
+test('showQr opens the QR window with the drawn code (never the link itself), until the link expires or the signal aborts', async () => {
   const calls = [];
   const run = async (script, args, stdin, opts) => { calls.push({ script, stdin: JSON.parse(stdin), opts }); return { code: 0 }; };
   const signal = new AbortController().signal;
@@ -56,7 +56,7 @@ test('showQr opens the QR window with the link, until the link expires or the si
   assert.equal(createWinOps({ run }).showQr({ name: 'netflix', kind: 'web', site: 'netflix.com', link: 'https://x/#a', expiresAt, signal }), undefined);
   assert.equal(calls[0].script, 'qr.ps1');
   assert.deepEqual(calls[0].stdin.name, 'netflix');
-  assert.equal(calls[0].stdin.link, 'https://x/#a');
+  assert.deepEqual(Object.keys(calls[0].stdin).sort(), ['expiresAt', 'kind', 'modules', 'name', 'path'], 'the link and its key stay in Node');
   assert.equal(calls[0].stdin.expiresAt, expiresAt);
   assert.match(calls[0].stdin.path, /^M\d+ \d+h\d+v1h-\d+z/, 'the QR code is drawn in Node and sent as path data');
   assert.ok(calls[0].stdin.modules >= 21 + 8, 'the code is at least 21 modules wide, plus the quiet zone');

@@ -136,3 +136,15 @@ test('buildSite refuses to clear a folder it did not make', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('every GitHub Action a workflow uses is pinned to an exact commit, not a tag that can move', () => {
+  const dir = new URL('../.github/workflows/', import.meta.url);
+  for (const file of readdirSync(dir)) {
+    const uses = [...readFileSync(new URL(file, dir), 'utf8').matchAll(/uses:\s*(\S+)(.*)/g)];
+    assert.ok(uses.length > 0, file);
+    for (const [, action, comment] of uses) {
+      assert.match(action, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${file}: ${action}`);
+      assert.match(comment, /^\s+# v\d/, `${file}: ${action} says which version it is`);
+    }
+  }
+});

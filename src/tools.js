@@ -147,7 +147,10 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
 
     async delete_secret({ name }) {
       checkName(name);
-      if (await vault.delete(name)) return `Deleted "${name}".`;
+      if (await vault.delete(name)) {
+        phone?.forget(name);
+        return `Deleted "${name}".`;
+      }
       throw await notFound(name);
     },
   };

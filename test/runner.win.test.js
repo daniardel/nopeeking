@@ -196,6 +196,26 @@ test('stopAll stops a running command and removes its script file', { skip }, as
   }
 });
 
+test('stopAll stops several running commands at once, within the MCP client\'s 2 seconds', { skip }, async () => {
+  const markers = [0, 1, 2].map((i) => path.join(os.tmpdir(), `passclaude-marker-${process.pid}-${Date.now()}-${i}.txt`));
+  const runs = markers.map((m) => runCommand({ command: `Set-Content -LiteralPath '${m}' -Value x; Start-Sleep -Seconds 30`, timeoutSec: 60 }));
+  try {
+    const started = Date.now();
+    while (!markers.every((m) => fs.existsSync(m))) {
+      assert.ok(Date.now() - started < 15_000, 'the commands never started');
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const stopping = Date.now();
+    stopAll();
+    assert.ok(Date.now() - stopping < 2000, `stopAll took ${Date.now() - stopping} ms`);
+    for (const r of await Promise.all(runs)) assert.equal(r.timedOut, false);
+    assert.ok(Date.now() - stopping < 5000, 'the commands were not stopped');
+  } finally {
+    stopAll();
+    for (const m of markers) fs.rmSync(m, { force: true });
+  }
+});
+
 test('stopAll with nothing running does nothing', { skip }, () => {
   assert.doesNotThrow(() => stopAll());
 });

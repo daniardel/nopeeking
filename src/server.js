@@ -95,9 +95,12 @@ export async function startServer() {
   const deps = createDeps();
   const server = createServer(deps);
   process.stdin.on('end', async () => {
-    // On Windows a child outlives its parent: stop any running command first, so it does not keep its secrets or its script file.
+    // Let a phone confirmation that is already on its way reach the relay. Its wait starts now, so it overlaps with stopAll()
+    // and the two together stay inside the 2 seconds the MCP client gives the server after closing stdin.
+    const closing = deps.phone.close();
+    // On Windows a child outlives its parent: stop any running command, so it does not keep its secrets or its script file.
     stopAll();
-    await deps.phone.close(); // let a phone confirmation that is already on its way reach the relay
+    await closing;
     process.exit(0);
   });
   await server.connect(new StdioServerTransport());

@@ -197,6 +197,11 @@ export function createPhone({
       });
     },
 
+    /** Drops a finished link for name (after its secret is deleted), so check() no longer reports it as saved. */
+    forget(name) {
+      if (pending.get(name)?.status !== 'waiting') pending.delete(name);
+    },
+
     /**
      * Ends every waiting link (which aborts its relay connection). Resolves once messages already being saved have been
      * acknowledged (or after CLOSE_ACK_WAIT_MS), then after CLOSE_DRAIN_MS. The drain is needed because on Windows,

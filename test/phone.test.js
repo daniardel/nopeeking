@@ -68,6 +68,21 @@ test('a secret sent from the phone is saved and acknowledged', async () => {
   assert.equal(await phone.check('netflix', 10), 'saved');
 });
 
+test('forget drops a finished link, so a deleted secret is no longer reported saved', async () => {
+  const vault = memoryVault();
+  const ntfy = fakeNtfy();
+  const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
+  const { link } = await phone.start({ name: 'gh', kind: 'command' });
+  await phone.start({ name: 'other', kind: 'command' });
+  await phoneSends(link, ntfy, 'phone-secret-1');
+  assert.equal(await phone.check('gh', 1000), 'saved');
+  phone.forget('gh');
+  phone.forget('other'); // still waiting: left alone
+  assert.equal(await phone.check('gh', 10), 'none');
+  assert.equal(await phone.check('other', 10), 'waiting');
+  phone.close();
+});
+
 test('garbage and messages sealed for another site are ignored (Review Focus #5)', async () => {
   const vault = memoryVault();
   const ntfy = fakeNtfy();

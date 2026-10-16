@@ -15,6 +15,8 @@ const TASKKILL_EXE = path.join(process.env.SystemRoot || 'C:\\Windows', 'System3
 const EXIT_GRACE_MS = 2000;
 // After taskkill, how long to wait for PowerShell to exit before killing it directly.
 const KILL_BACKSTOP_MS = 5000;
+// How long stopAll() lets taskkill run. The server exits right after, and the MCP client kills it 2 seconds after closing stdin.
+const STOP_ALL_KILL_MS = 1200;
 
 // Appended after the user's command, with a blank line between so a trailing backtick in the command cannot join it. -File exits 0
 // even when the last statement failed, so this reads $? first and exits non-zero for a failing last statement. A command that
@@ -53,11 +55,12 @@ const live = new Set();
  */
 export function stopAll() {
   const runs = [...live];
-  for (const { child } of runs) {
-    // A child that has already exited may have had its process id reused, so it is left alone.
-    if (child.exitCode !== null || child.signalCode !== null) continue;
+  // A child that has already exited may have had its process id reused, so it is left alone.
+  const pids = runs.filter(({ child }) => child.exitCode === null && child.signalCode === null).map(({ child }) => String(child.pid));
+  if (pids.length > 0) {
+    // One taskkill for all of them, bounded, so shutdown stays inside the MCP client's 2 seconds however many are running.
     try {
-      execFileSync(TASKKILL_EXE, ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: KILL_BACKSTOP_MS });
+      execFileSync(TASKKILL_EXE, [...pids.flatMap((pid) => ['/pid', pid]), '/T', '/F'], { windowsHide: true, stdio: 'ignore', timeout: STOP_ALL_KILL_MS });
     } catch {
       // ignored
     }

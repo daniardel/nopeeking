@@ -26,7 +26,7 @@ async function setup({
   const vault = memoryVault({ popupValue });
   await vault.put('netflix', { kind: 'web', site: 'netflix.com', created: '2026-10-13T00:00:00.000Z' }, WEB);
   await vault.put('github', { kind: 'command', created: '2026-10-13T00:00:00.000Z' }, CMD);
-  const calls = { typed: [], started: [], runs: [] };
+  const calls = { typed: [], started: [], runs: [], forgotten: [] };
   const win = {
     chromeWindows: async () => windows,
     typeInto: async (name, hwnd, url) => { calls.typed.push({ name, hwnd, url }); return typeResult; },
@@ -37,6 +37,7 @@ async function setup({
       return { link: 'https://me.github.io/passclaude/#v=1&t=pc-test', expiresAt: Date.now() + 300_000 };
     },
     check: async () => phoneStatus,
+    forget: (name) => calls.forgotten.push(name),
   };
   const runCommand = async (opts) => { calls.runs.push(opts); return run(opts); };
   return { vault, calls, tools: createHandlers({ vault, win, phone, runCommand, checkWaitMs: 5 }) };
@@ -166,9 +167,10 @@ test('run_with_secret reports timeouts and cut-off output without leaking half a
 });
 
 test('delete_secret deletes and reports unknown names', async () => {
-  const { tools, vault } = await setup();
+  const { tools, vault, calls } = await setup();
   assert.equal(await tools.delete_secret({ name: 'github' }), 'Deleted "github".');
   assert.equal(await vault.meta('github'), null);
+  assert.deepEqual(calls.forgotten, ['github']); // check_phone_secret must not report it saved any more
   await assert.rejects(tools.delete_secret({ name: 'github' }), /No secret named "github"\. Saved: netflix\./);
 });
 

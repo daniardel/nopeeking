@@ -41,6 +41,15 @@ test('a shadow naming a colour that does not exist is refused', () => {
   assert.throws(() => validateTokens(t), /shadow "card": no color named "purple"/);
 });
 
+test('a colour the generated images use cannot be renamed away', () => {
+  for (const name of ['violet', 'yellow', 'ink', 'white', 'muted-on-dark']) {
+    const t = readTokens();
+    t.color[`${name}-renamed`] = t.color[name];
+    delete t.color[name];
+    assert.throws(() => validateTokens(t), new RegExp(`missing color "${name}"`));
+  }
+});
+
 test('a missing section is refused', () => {
   for (const key of ['color', 'radius', 'shadow', 'font']) {
     const t = readTokens();

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const TOKENS = fileURLToPath(new URL('../../brand/tokens.json', import.meta.url));
 const HEX = /^#[0-9A-F]{6}$/;
 const NAME = /^[a-z][a-z0-9-]*$/;
+const USED_BY_IMAGES = ['violet', 'yellow', 'ink', 'white', 'muted-on-dark']; // read by build.js for lockups and the social preview
 
 export function readTokens() {
   return JSON.parse(readFileSync(TOKENS, 'utf8'));
@@ -14,6 +15,9 @@ export function readTokens() {
 export function validateTokens(t) {
   for (const key of ['color', 'radius', 'shadow', 'font']) {
     if (typeof t[key] !== 'object' || t[key] === null) throw new Error(`missing "${key}"`);
+  }
+  for (const name of USED_BY_IMAGES) {
+    if (!Object.hasOwn(t.color, name)) throw new Error(`missing color "${name}" (the generated images use it)`);
   }
   for (const [name, hex] of Object.entries(t.color)) {
     if (!NAME.test(name)) throw new Error(`color "${name}": names are lower-case letters, digits and dashes`);

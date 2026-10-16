@@ -48,5 +48,8 @@
   "homepage": "https://github.com/daniardel/passclaude#readme",
   "bugs": {
     "url": "https://github.com/daniardel/passclaude/issues"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.5"
   }
 }

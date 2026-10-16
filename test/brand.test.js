@@ -6,6 +6,8 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readTokens, tokensToCss, validateTokens } from '../scripts/brand/tokens.js';
 import { writeAtomic } from '../scripts/brand/write.js';
+import { ICON_SIZES, decodeIco, encodeIco, pngSize } from '../scripts/brand/ico.js';
+import { lockupSvg, svgInner } from '../scripts/brand/compose.js';
 
 const root = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const lf = (s) => s.replace(/\r\n/g, '\n'); // git on Windows may check text files out with CRLF
@@ -73,7 +75,7 @@ test('writeAtomic leaves the old file and no temp file when it fails', () => {
   }
 });
 
-const LOGOS = ['mark', 'mark-yellow', 'mark-mono', 'face-saved', 'face-error', 'face-expired'];
+const LOGOS = ['mark', 'mark-yellow', 'mark-mono', 'face-saved', 'face-error', 'face-expired', 'lockup', 'lockup-on-violet'];
 
 test('every logo file is a self-contained SVG in brand colours, with no live text', () => {
   const palette = new Set(Object.values(readTokens().color));
@@ -119,4 +121,50 @@ test('outlines.json has every text the generated images need', () => {
     assert.equal(o[key].unitsPerEm, 1000, key);
   }
   assert.equal(o.wordmark.text, 'passClaude');
+});
+
+/** The first 24 bytes of a PNG: signature, IHDR length and type, width, height. Enough for pngSize. */
+function fakePng(width, height) {
+  const b = Buffer.alloc(24);
+  Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex').copy(b);
+  b.writeUInt32BE(width, 16);
+  b.writeUInt32BE(height, 20);
+  return b;
+}
+
+test('encodeIco stores 256 px as 0 and decodeIco reads it back', () => {
+  const images = [16, 256].map((size) => ({ size, png: fakePng(size, size) }));
+  const ico = encodeIco(images);
+  assert.equal(ico.readUInt8(6 + 16), 0, 'width byte of the 256 px entry');
+  assert.equal(ico.readUInt8(6 + 16 + 1), 0, 'height byte of the 256 px entry');
+  assert.deepEqual(decodeIco(ico).map(({ size, png }) => [size, pngSize(png).width]), [[16, 16], [256, 256]]);
+});
+
+test('encodeIco refuses sizes Windows icons cannot hold', () => {
+  for (const size of [0, 300, 12.5]) {
+    assert.throws(() => encodeIco([{ size, png: fakePng(1, 1) }]), /icon size .* is not 1–256/);
+  }
+});
+
+test('assets/passclaude.ico holds every size, each a PNG of that size', () => {
+  const entries = decodeIco(readFileSync(root('assets/passclaude.ico')));
+  assert.deepEqual(entries.map((e) => e.size), ICON_SIZES);
+  for (const { size, png } of entries) assert.deepEqual(pngSize(png), { width: size, height: size });
+});
+
+test('lockupSvg puts the mark and the outlined wordmark side by side', () => {
+  const mark = readFileSync(root('brand/logo/mark.svg'), 'utf8');
+  const wordmark = { text: 'x', unitsPerEm: 1000, d: 'M0 0L10 0L10 -10Z', box: [0, -700, 1000, 200] };
+  const svg = lockupSvg(mark, wordmark, '#17132E');
+  assert.ok(svg.includes(svgInner(mark)));
+  assert.match(svg, /viewBox="0 0 \d+ 64"/);
+  assert.match(svg, /<path transform="translate\([\d.-]+ [\d.-]+\) scale\([\d.]+\)" fill="#17132E" d="M0 0L10 0L10 -10Z"\/>/);
+});
+
+test('svgInner refuses something that is not an SVG', () => {
+  assert.throws(() => svgInner('<html></html>'), /not an SVG file/);
+});
+
+test('brand/social-preview.png is 1280×640', () => {
+  assert.deepEqual(pngSize(readFileSync(root('brand/social-preview.png'))), { width: 1280, height: 640 });
 });

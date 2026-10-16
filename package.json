@@ -20,7 +20,8 @@
     "win32"
   ],
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "brand": "node scripts/brand/build.js"
   },
   "keywords": [
     "claude",

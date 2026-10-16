@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="72" viewBox="0 0 80 72" role="img" aria-label="passClaude padlock, asleep">
+  <path d="M21 31V24a11 11 0 0 1 22 0v7" fill="none" stroke="#17132E" stroke-width="6" stroke-linecap="round"/>
+  <rect x="9" y="28" width="46" height="34" rx="13" fill="#5B2EFF"/>
+  <path d="M20.5 44.5q4 3 8 0M35.5 44.5q4 3 8 0" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M29 53h6" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M58 14h8l-8 9h8M68 3h6l-6 7h6" fill="none" stroke="#3D17D6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

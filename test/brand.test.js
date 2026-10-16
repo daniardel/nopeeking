@@ -72,3 +72,16 @@ test('writeAtomic leaves the old file and no temp file when it fails', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+const LOGOS = ['mark', 'mark-yellow', 'mark-mono', 'face-saved', 'face-error', 'face-expired'];
+
+test('every logo file is a self-contained SVG in brand colours, with no live text', () => {
+  const palette = new Set(Object.values(readTokens().color));
+  for (const name of LOGOS) {
+    const svg = lf(readFileSync(root(`brand/logo/${name}.svg`), 'utf8'));
+    assert.match(svg, /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"[^>]* viewBox="[\d. ]+"/, name);
+    assert.match(svg, /<\/svg>\n$/, name);
+    assert.doesNotMatch(svg, /<text|<image|<style|<script|<foreignObject/, name);
+    for (const hex of svg.match(/#[0-9A-Fa-f]{6}\b/g) ?? []) assert.ok(palette.has(hex), `${name}: ${hex} is not a brand colour`);
+  }
+});

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="passClaude">
+  <mask id="pc-face">
+    <rect width="64" height="64" fill="#fff"/>
+    <path d="M20.5 39.5q4 4.5 8 0M35.5 39.5q4 4.5 8 0" fill="none" stroke="#000" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M28.5 48q3.5 2.6 7 0" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"/>
+  </mask>
+  <path d="M21 27V20a11 11 0 0 1 22 0v7" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+  <rect x="9" y="24" width="46" height="34" rx="13" fill="currentColor" mask="url(#pc-face)"/>
+</svg>

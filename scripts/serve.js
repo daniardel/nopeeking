@@ -1,4 +1,4 @@
-// Dev only: serves a folder on http://localhost:8765/ (e.g. `node scripts/serve.js docs`).
+// Dev only: serves a folder on http://localhost:8765/ (e.g. `node scripts/serve.js docs`; set PORT to use another port).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,8 +10,11 @@ const types = {
   '.css': 'text/css; charset=utf-8',
   '.woff2': 'font/woff2',
   '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
 };
+const port = Number(process.env.PORT ?? 8765);
 
 http.createServer((req, res) => {
   const rel = decodeURIComponent(new URL(req.url, 'http://localhost').pathname).replace(/^\/+/, '') || 'index.html';
@@ -21,4 +24,4 @@ http.createServer((req, res) => {
     return;
   }
   res.writeHead(200, { 'content-type': types[path.extname(file)] ?? 'application/octet-stream' }).end(fs.readFileSync(file));
-}).listen(8765, '127.0.0.1', () => console.log(`serving ${root} on http://localhost:8765/`));
+}).listen(port, '127.0.0.1', () => console.log(`serving ${root} on http://localhost:${port}/`));

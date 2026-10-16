@@ -29,7 +29,7 @@ passClaude is an independent project. It is not made by or affiliated with Anthr
 
 You need Windows 10 or 11, [Node.js](https://nodejs.org) 20 or newer and [Claude Code](https://docs.claude.com/en/docs/claude-code/setup). For website logins you also need Chrome with Claude in Chrome.
 
-**One click:** download [install-passclaude.cmd](https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd) and double-click it. It checks that Node.js and Claude Code are there and adds passClaude. Windows may warn that the file comes from the internet: choose "More info", then "Run anyway". It's a short text file, so you can open it in Notepad to read it first.
+**One click:** download [install-passclaude.cmd](https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd) and double-click it. A small window checks that Node.js and Claude Code are there and adds passClaude. Windows may warn that the file comes from the internet: choose "More info", then "Run anyway". It's a plain text file (a few batch lines that start Windows PowerShell on the rest), so you can open it in Notepad to read it first.
 
 **One command:**
 
@@ -47,7 +47,8 @@ Then restart Claude Code.
 |---|---|
 | "Save my Netflix password" | A password popup opens on your PC. You type it there. |
 | "Save my GitHub token. I'm on my phone." | Claude shows a one-time link. You open it on your phone and type the token. |
-| "Log into Netflix" | Claude opens the login page and clicks the password box. passClaude types the password. Claude clicks Sign in. |
+| "Save my GitHub token, I'll type it on my phone" (while at the PC) | Same link, and a window on your PC shows it as a QR code to scan. It closes once the token arrives. |
+| "Log into Netflix" | Claude opens the login page and clicks the password box. passClaude types the password, and a note in the corner of the screen says so. Claude clicks Sign in. |
 | "List my GitHub repos with my GitHub token" | Claude runs the command with your token in `$env:GITHUB_TOKEN`. The output shows `••••(github)` where the token would be. |
 | "Log the GitHub CLI in with my GitHub token" | Claude runs `gh auth login --with-token` and passClaude types the token into it, the way you would at the prompt. Works for any command that reads a token or password from its input, like `docker login --password-stdin`. |
 | "What passwords do you have?" | Names and sites only. Never values. |
@@ -72,7 +73,7 @@ passClaude is an MCP server that runs on your PC. Its tools never return a secre
 |---|---|
 | `list_secrets` | Names, kinds and sites of saved secrets |
 | `add_secret` | Opens a password popup on the PC |
-| `add_secret_from_phone` | Gives a one-time link to type the secret on your phone |
+| `add_secret_from_phone` | Gives a one-time link to type the secret on your phone, optionally shown as a QR code on the PC |
 | `check_phone_secret` | Waits up to 50 seconds for the phone to send it |
 | `type_secret` | Types a website password into Chrome, only on its site |
 | `run_with_secret` | Runs a Windows PowerShell command with secrets as environment variables or typed into its input, output masked |
@@ -119,6 +120,7 @@ The hook covers Claude Code's Bash and PowerShell tools and also passClaude's ow
 |---|---|---|
 | `PASSCLAUDE_NTFY_URL` | `https://ntfy.sh` | Relay for phone links. Point it at your own [ntfy](https://docs.ntfy.sh/install/) server if you like. |
 | `PASSCLAUDE_PAGE_URL` | `https://daniardel.github.io/passclaude-phone/` | Where phone links open. Host the page yourself and point this at it. |
+| `PASSCLAUDE_NOTIFY` | `on` | Set to `off` to stop the note in the corner of the screen each time passClaude types a password. |
 
 A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `style.css`, `app.js`, `link.js`, `e2e.js` and the `brand` folder from the `docs/` folder of the GitHub repo. The page loads nothing from other sites, fonts included. The npm package only ships `docs/e2e.js`.
 

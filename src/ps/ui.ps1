@@ -86,10 +86,12 @@ function Save-PcPng($Window, [string]$Path, [double]$Scale = 1) {
   $Element = $Window.Content
   $available = if ([double]::IsNaN($Window.Width)) { [double]::PositiveInfinity } else { $Window.Width }
   $Element.Measure((New-Object Windows.Size $available, ([double]::PositiveInfinity)))
-  $Element.Arrange((New-Object Windows.Rect (New-Object Windows.Point 0, 0), $Element.DesiredSize))
+  # The window's width as on screen when it has one; DesiredSize includes the margin around the card.
+  $size = if ([double]::IsNaN($Window.Width)) { $Element.DesiredSize } else { New-Object Windows.Size $Window.Width, $Element.DesiredSize.Height }
+  $Element.Arrange((New-Object Windows.Rect (New-Object Windows.Point 0, 0), $size))
   $Element.UpdateLayout()
-  $width = [int][Math]::Ceiling($Element.DesiredSize.Width * $Scale)  # DesiredSize includes the margin around the card
-  $height = [int][Math]::Ceiling($Element.DesiredSize.Height * $Scale)
+  $width = [int][Math]::Ceiling($size.Width * $Scale)
+  $height = [int][Math]::Ceiling($size.Height * $Scale)
   $bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap $width, $height, (96 * $Scale), (96 * $Scale), ([Windows.Media.PixelFormats]::Pbgra32)
   $bitmap.Render($Element)
   $encoder = New-Object Windows.Media.Imaging.PngBitmapEncoder

@@ -99,19 +99,24 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
       throw new Error(result.reason);
     },
 
-    async run_with_secret({ command, env, cwd, timeout_sec: timeoutSec = 120 }) {
+    async run_with_secret({ command, env, stdin, cwd, timeout_sec: timeoutSec = 120 }) {
       if (typeof command !== 'string' || !command.trim()) throw new Error('command is empty.');
       // The same check the guard hook makes for Bash and PowerShell: this command could print a saved value by itself.
       const blocked = guard.verdict({ tool_input: { command } });
       if (blocked) throw new Error(blocked);
       const mapping = Object.entries(env ?? {});
-      if (mapping.length === 0) {
-        throw new Error('env must map at least one environment variable to a saved secret, like {"GITHUB_TOKEN": "github"}.');
+      if (mapping.length === 0 && stdin === undefined) {
+        throw new Error(
+          'Give env to pass secrets as environment variables, like {"GITHUB_TOKEN": "github"}, or stdin to send one as the command\'s input.',
+        );
       }
-      for (const [varName, secretName] of mapping) {
+      for (const [varName] of mapping) {
         if (!ENV_NAME_RE.test(varName)) {
           throw new Error(`Bad environment variable name "${varName}". Use capital letters, digits and underscores, like GITHUB_TOKEN.`);
         }
+      }
+      const names = [...new Set([...mapping.map(([, secretName]) => secretName), ...(stdin === undefined ? [] : [stdin])])];
+      for (const secretName of names) {
         checkName(secretName);
         const meta = await vault.meta(secretName);
         if (!meta) throw await notFound(secretName);
@@ -122,20 +127,22 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
       }
       if (cwd !== undefined && !isFolder(cwd)) throw new Error(`Folder not found: ${cwd}`);
 
-      const values = {};
       const secrets = [];
-      for (const [varName, secretName] of mapping) {
+      const byName = new Map();
+      for (const secretName of names) {
         const value = await vault.get(secretName);
         if (value === null) throw await notFound(secretName);
-        values[varName] = value;
+        byName.set(secretName, value);
         secrets.push({ name: secretName, value });
       }
+      const values = Object.fromEntries(mapping.map(([varName, secretName]) => [varName, byName.get(secretName)]));
+      const input = stdin === undefined ? {} : { stdin: byName.get(stdin) };
 
       // Whatever went wrong while starting the command, the original message is never passed on: Node's own spawn errors
       // can quote an environment value (for example one containing a null character) word for word.
       let r;
       try {
-        r = await runCommand({ command, env: values, cwd, timeoutSec });
+        r = await runCommand({ command, env: values, cwd, timeoutSec, ...input });
       } catch {
         throw new Error("Couldn't start the command. Nothing ran.");
       }

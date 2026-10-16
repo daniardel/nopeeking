@@ -1,4 +1,4 @@
-// Runs a Windows PowerShell command with secrets added as environment variables.
+// Runs a Windows PowerShell command with secrets added as environment variables, and optionally one sent as its input.
 // Returns raw output; the caller redacts it before it reaches Claude.
 import { spawn, execFile, execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
@@ -69,7 +69,7 @@ export function stopAll() {
   for (const { scriptPath } of runs) removeScript(scriptPath);
 }
 
-export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
+export function runCommand({ command, env = {}, cwd, timeoutSec = 120, stdin }) {
   const script = `$ProgressPreference = 'SilentlyContinue'; [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)\n${command}\n\n${POSTAMBLE}`;
   return new Promise((resolve, reject) => {
     // A script file, not -EncodedCommand: for encoded commands PowerShell writes stderr as XML (CLIXML), which escapes the text
@@ -164,7 +164,11 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120 }) {
     });
     child.on('close', (code) => finish(code));
     child.on('error', (e) => settle(() => reject(e)));
+    // Programs the script starts inherit PowerShell's input, so stdin reaches the first one that reads it, byte for byte. Piping
+    // inside PowerShell would not: Windows PowerShell 5.1 turns non-ASCII characters into ? when it pipes text to a program.
+    // A command that never reads its input just leaves it unread; a write error then is ignored.
     child.stdin.on('error', () => {});
-    child.stdin.end();
+    if (stdin === undefined) child.stdin.end();
+    else child.stdin.end(`${stdin}\n`, 'utf8');
   });
 }

@@ -7,7 +7,7 @@
 You never paste a password into the chat. You type it once, into a popup on your PC or a one-time encrypted link on your phone. After that Claude can *use* it, but passClaude's tools never return the value, so it stays out of the conversation, the transcript and the model. There are a few ways it can still get out: read "Not protected" below.
 
 - **Website logins:** Claude clicks the password box and passClaude types the password, but only on the site it belongs to.
-- **API keys in commands:** Claude runs the command, the key goes in as an environment variable, and it is masked in the output.
+- **API keys in commands:** Claude runs the command, the key goes in as an environment variable or is typed into a login prompt, and it is masked in the output.
 - **Works from your phone** with Claude Code Remote Control, including saving new secrets.
 - **Free and open source.** No password manager, no account. Windows.
 
@@ -35,6 +35,7 @@ Then restart Claude Code.
 | "Save my GitHub token. I'm on my phone." | Claude shows a one-time link. You open it on your phone and type the token. |
 | "Log into Netflix" | Claude opens the login page and clicks the password box. passClaude types the password. Claude clicks Sign in. |
 | "List my GitHub repos with my GitHub token" | Claude runs the command with your token in `$env:GITHUB_TOKEN`. The output shows `••••(github)` where the token would be. |
+| "Log the GitHub CLI in with my GitHub token" | Claude runs `gh auth login --with-token` and passClaude types the token into it, the way you would at the prompt. Works for any command that reads a token or password from its input, like `docker login --password-stdin`. |
 | "What passwords do you have?" | Names and sites only. Never values. |
 
 Commands run in Windows PowerShell (`powershell.exe`, version 5.1), so Claude writes PowerShell syntax such as `$env:GITHUB_TOKEN`, not `$GITHUB_TOKEN` or `%GITHUB_TOKEN%`.
@@ -60,7 +61,7 @@ passClaude is an MCP server that runs on your PC. Its tools never return a secre
 | `add_secret_from_phone` | Gives a one-time link to type the secret on your phone |
 | `check_phone_secret` | Waits up to 50 seconds for the phone to send it |
 | `type_secret` | Types a website password into Chrome, only on its site |
-| `run_with_secret` | Runs a Windows PowerShell command with secrets as environment variables, output masked |
+| `run_with_secret` | Runs a Windows PowerShell command with secrets as environment variables or typed into its input, output masked |
 | `delete_secret` | Deletes a secret |
 
 Commands stop after 2 minutes unless Claude asks for longer (10 minutes at most). Output is cut off at 1 MB per stream.

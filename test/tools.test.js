@@ -8,9 +8,9 @@ const WEB = 'Web-Pa$$word-123';
 const CMD = 'ghp_TOKENVALUE1234';
 const POPUP = 'Popup-Typed-Value-9';
 
-/** A command that leaks its secrets every way it can: raw, base64 and URL-encoded. */
+/** A command that leaks its secrets, env and stdin, every way it can: raw, base64 and URL-encoded. */
 async function leakyRun(opts) {
-  const leak = Object.values(opts.env)
+  const leak = [...Object.values(opts.env), ...(opts.stdin === undefined ? [] : [opts.stdin])]
     .map((v) => `${v} ${Buffer.from(v).toString('base64')} ${encodeURIComponent(v)}`)
     .join(' ');
   return { exitCode: 0, timedOut: false, stdout: `out ${leak}`, stderr: `err ${leak}`, truncated: { stdout: false, stderr: false } };
@@ -118,11 +118,29 @@ test('run_with_secret passes secrets as env vars and masks them in the output', 
   assert.ok(!out.includes(CMD));
 });
 
+test("run_with_secret can send a secret as the command's input, alone or with env, and masks it too", async () => {
+  const { tools, vault, calls } = await setup({
+    run: async (opts) => ({ exitCode: 0, timedOut: false, stdout: `got ${opts.stdin}`, stderr: '', truncated: { stdout: false, stderr: false } }),
+  });
+  await vault.put('npm', { kind: 'command', created: '2026-10-13T00:00:00.000Z' }, 'npm_SECOND_VALUE_77');
+  const out = await tools.run_with_secret({ command: 'gh auth login --with-token', stdin: 'github' });
+  assert.deepEqual(calls.runs[0], { command: 'gh auth login --with-token', env: {}, cwd: undefined, timeoutSec: 120, stdin: CMD });
+  assert.match(out, /--- stdout ---\ngot ••••\(github\)/);
+  assert.ok(!out.includes(CMD));
+  await tools.run_with_secret({ command: 'x', env: { GH_TOKEN: 'github' }, stdin: 'npm' });
+  assert.deepEqual(calls.runs[1], { command: 'x', env: { GH_TOKEN: CMD }, cwd: undefined, timeoutSec: 120, stdin: 'npm_SECOND_VALUE_77' });
+  await assert.rejects(tools.run_with_secret({ command: 'x', stdin: 'netflix' }), /web secret and can only be used with type_secret/);
+  await assert.rejects(tools.run_with_secret({ command: 'x', stdin: 'nope' }), /No secret named "nope"/);
+  await assert.rejects(tools.run_with_secret({ command: 'x', stdin: 'Bad Name' }), /Bad name/);
+  assert.equal(calls.runs.length, 2);
+});
+
 test('run_with_secret refuses bad requests before running anything', async () => {
   const { tools, calls } = await setup();
   const cases = [
     [{ command: '', env: { T: 'github' } }, /command is empty/],
-    [{ command: 'x', env: {} }, /at least one environment variable/],
+    [{ command: 'x', env: {} }, /Give env .* or stdin/],
+    [{ command: 'x' }, /Give env .* or stdin/],
     [{ command: 'x', env: { 'bad-name': 'github' } }, /Bad environment variable name/],
     [{ command: 'x', env: { lower: 'github' } }, /Bad environment variable name/],
     [{ command: 'x', env: { T: 'netflix' } }, /web secret and can only be used with type_secret/],
@@ -190,6 +208,8 @@ test('no tool output or error ever contains a stored value', async () => {
       await seen(tools.type_secret({ name: 'github' })),
       await seen(tools.run_with_secret({ command: 'x', env: { A: 'github', B: 'new-one' } })),
       await seen(tools.run_with_secret({ command: 'x', env: { A: 'netflix' } })),
+      await seen(tools.run_with_secret({ command: 'x', stdin: 'github' })),
+      await seen(tools.run_with_secret({ command: 'x', stdin: 'netflix' })),
       await seen(tools.list_secrets()),
       await seen(tools.delete_secret({ name: 'netflix' })),
       await seen(tools.delete_secret({ name: 'netflix' })),

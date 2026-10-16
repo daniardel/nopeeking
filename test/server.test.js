@@ -31,7 +31,10 @@ test('serves the seven tools and tells Claude never to ask for secrets in chat',
   assert.deepEqual(tools.map((t) => t.name).sort(), [
     'add_secret', 'add_secret_from_phone', 'check_phone_secret', 'delete_secret', 'list_secrets', 'run_with_secret', 'type_secret',
   ]);
-  assert.deepEqual(tools.find((t) => t.name === 'run_with_secret').inputSchema.required, ['command', 'env']);
+  const run = tools.find((t) => t.name === 'run_with_secret');
+  // env or stdin, or both: the tool itself refuses a call with neither.
+  assert.deepEqual(run.inputSchema.required, ['command']);
+  assert.ok(run.inputSchema.properties.env && run.inputSchema.properties.stdin);
   assert.match(client.getInstructions(), /Never ask the user to paste/);
   // check_phone_secret must answer before the MCP client's default 60 second request timeout.
   assert.match(tools.find((t) => t.name === 'check_phone_secret').description, /Wait up to 50 seconds/);

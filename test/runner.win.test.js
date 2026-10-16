@@ -21,6 +21,21 @@ test('passes env vars to the command and returns its output', { skip }, async ()
   assert.match(r.stdout, /v=abc "q" ü/);
 });
 
+test('sends stdin, byte for byte and followed by Enter, to the first program that reads input', { skip }, async () => {
+  const echo = `& '${process.execPath}' -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.stringify(d)))"`;
+  const value = 'abc ü€ "q" $x 😀';
+  const r = await runCommand({ command: echo, stdin: value });
+  assert.equal(r.exitCode, 0);
+  assert.equal(JSON.parse(r.stdout.trim()), `${value}\n`);
+  // Without stdin the input is empty and closed, so a program that reads it does not wait for ever.
+  const none = await runCommand({ command: echo, timeoutSec: 20 });
+  assert.equal(JSON.parse(none.stdout.trim()), '');
+  // A command that never reads its input still finishes normally.
+  const ignored = await runCommand({ command: 'Write-Output ok', stdin: 'x'.repeat(200_000) });
+  assert.equal(ignored.exitCode, 0);
+  assert.match(ignored.stdout, /ok/);
+});
+
 test('reports exit codes and stderr', { skip }, async () => {
   const r = await runCommand({ command: '[Console]::Error.WriteLine("boom"); exit 3' });
   assert.equal(r.exitCode, 3);

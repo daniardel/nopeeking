@@ -50,10 +50,11 @@ const TOOLS = {
     inputSchema: { name: secretName },
   },
   run_with_secret: {
-    description: 'Run a Windows PowerShell command with saved command secrets as environment variables. Example: env {"GITHUB_TOKEN": "github"}, then use $env:GITHUB_TOKEN in the command. Secret values in the output are masked as ••••(name). Only send a secret to the service it is meant for.',
+    description: 'Run a Windows PowerShell command with saved command secrets as environment variables. Example: env {"GITHUB_TOKEN": "github"}, then use $env:GITHUB_TOKEN in the command. For a program that reads a secret from its input (a login that asks for a token or password, --with-token, --password-stdin), give stdin instead: the secret is typed into the command\'s input, followed by Enter. Don\'t pipe $env:X into a program yourself: Windows PowerShell turns non-ASCII characters into ?. Secret values in the output are masked as ••••(name). Only send a secret to the service it is meant for.',
     inputSchema: {
       command: z.string().min(1).describe('PowerShell command to run.'),
-      env: z.record(z.string(), z.string()).describe('Environment variable name -> saved secret name, e.g. {"GITHUB_TOKEN": "github"}.'),
+      env: z.record(z.string(), z.string()).optional().describe('Environment variable name -> saved secret name, e.g. {"GITHUB_TOKEN": "github"}.'),
+      stdin: secretName.optional().describe('A saved command secret to send as the command\'s input, followed by Enter. Only the first program that reads input gets it. Give env, stdin or both.'),
       cwd: z.string().optional().describe('Folder to run in (absolute path). Defaults to where passClaude was started.'),
       timeout_sec: z.number().int().min(1).max(MAX_TIMEOUT_SEC).optional().describe('Stop the command after this many seconds (default 120).'),
     },

@@ -58,11 +58,14 @@ test('tool results are text; refusals and invalid input come back marked as erro
   await client.close();
 });
 
-test('PASSCLAUDE_NOTIFY=off turns the typed notification off', () => {
+test('PASSCLAUDE_NOTIFY=off (or 0, false, no) turns the typed notification off', () => {
   assert.equal(createDeps({}).config.notify, true);
-  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'off' }).config.notify, false);
-  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'OFF' }).config.notify, false);
-  assert.equal(createDeps({ PASSCLAUDE_NOTIFY: 'on' }).config.notify, true);
+  for (const off of ['off', 'OFF', '0', 'false', 'False', 'no', ' off ']) {
+    assert.equal(createDeps({ PASSCLAUDE_NOTIFY: off }).config.notify, false, JSON.stringify(off));
+  }
+  for (const on of ['on', '1', 'true', 'yes', '']) {
+    assert.equal(createDeps({ PASSCLAUDE_NOTIFY: on }).config.notify, true, JSON.stringify(on));
+  }
 });
 
 test('createDeps reads the relay and page from the environment, then package.json', () => {

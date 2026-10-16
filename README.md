@@ -120,7 +120,7 @@ The hook covers Claude Code's Bash and PowerShell tools and also passClaude's ow
 |---|---|---|
 | `PASSCLAUDE_NTFY_URL` | `https://ntfy.sh` | Relay for phone links. Point it at your own [ntfy](https://docs.ntfy.sh/install/) server if you like. |
 | `PASSCLAUDE_PAGE_URL` | `https://daniardel.github.io/passclaude-phone/` | Where phone links open. Host the page yourself and point this at it. |
-| `PASSCLAUDE_NOTIFY` | `on` | Set to `off` to stop the note in the corner of the screen each time passClaude types a password. |
+| `PASSCLAUDE_NOTIFY` | `on` | Set to `off` (or `0`, `false`, `no`) to stop the note in the corner of the screen each time passClaude types a password. |
 
 A custom relay must use https and be reachable from your phone. The page URL must be https too, because the page needs a secure connection to encrypt. To host the page yourself, copy `index.html`, `style.css`, `app.js`, `link.js`, `e2e.js` and the `brand` folder from the `docs/` folder of the GitHub repo. The page loads nothing from other sites, fonts included. The npm package only ships `docs/e2e.js`.
 

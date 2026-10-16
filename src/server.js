@@ -89,7 +89,7 @@ export function createDeps(env = process.env) {
   const config = {
     ntfyUrl: (env.PASSCLAUDE_NTFY_URL || 'https://ntfy.sh').replace(/\/+$/, ''),
     pageUrl: env.PASSCLAUDE_PAGE_URL || pkg.passclaude?.pageUrl || '',
-    notify: (env.PASSCLAUDE_NOTIFY ?? '').toLowerCase() !== 'off',
+    notify: !['off', '0', 'false', 'no'].includes((env.PASSCLAUDE_NOTIFY ?? '').trim().toLowerCase()),
   };
   const vault = createVault();
   const ntfy = createNtfy({ baseUrl: config.ntfyUrl });

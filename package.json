@@ -9,6 +9,7 @@
   "files": [
     "src",
     "hook",
+    "assets",
     "docs/e2e.js",
     "README.md",
     "LICENSE"

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { execSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -167,4 +168,15 @@ test('svgInner refuses something that is not an SVG', () => {
 
 test('brand/social-preview.png is 1280×640', () => {
   assert.deepEqual(pngSize(readFileSync(root('brand/social-preview.png'))), { width: 1280, height: 640 });
+});
+
+test('the npm package ships assets/ and leaves the brand sources out', () => {
+  const out = execSync('npm pack --dry-run --json --ignore-scripts', { cwd: root('.'), encoding: 'utf8' });
+  const paths = JSON.parse(out)[0].files.map((f) => f.path.replace(/\\/g, '/'));
+  assert.ok(paths.includes('assets/passclaude.ico'), 'icon');
+  for (const f of fontRoles) {
+    assert.ok(paths.includes(`assets/fonts/OFL-${f.family.replace(/ /g, '')}.txt`), `${f.family} licence`);
+    for (const file of Object.values(f.files)) assert.ok(paths.includes(`assets/fonts/${file}.ttf`), file);
+  }
+  assert.deepEqual(paths.filter((p) => p.startsWith('brand/') || p.startsWith('scripts/')), []);
 });

@@ -35,6 +35,7 @@ test('serves the seven tools and tells Claude never to ask for secrets in chat',
   assert.match(client.getInstructions(), /Never ask the user to paste/);
   // check_phone_secret must answer before the MCP client's default 60 second request timeout.
   assert.match(tools.find((t) => t.name === 'check_phone_secret').description, /Wait up to 50 seconds/);
+  assert.match(tools.find((t) => t.name === 'add_secret_from_phone').description, /end your turn/i);
   await client.close();
 });
 

@@ -84,6 +84,9 @@ test('add_secret_from_phone returns the link at once; check_phone_secret reports
   assert.match(out, /https:\/\/me\.github\.io\/passclaude\/#v=1&t=pc-test/);
   assert.match(out, /expires in 5 minutes/);
   assert.match(out, /check_phone_secret/);
+  // On Remote Control the user sees Claude's message only when its turn ends, so Claude must not wait inside the turn.
+  assert.match(out, /end your turn/i);
+  assert.match(out, /when the user says they sent it/i);
   assert.deepEqual(calls.started, [{ name: 'hulu', kind: 'web', site: 'hulu.com' }]);
   const expected = { saved: /Saved "hulu" from the phone/, waiting: /Still waiting/, expired: /expired\. Nothing saved/ };
   for (const [status, pattern] of Object.entries(expected)) {

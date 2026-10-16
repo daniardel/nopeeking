@@ -74,7 +74,9 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
         '',
         `They type ${meta.kind === 'web' ? `the password for ${meta.site}` : 'the secret'} there. It is encrypted on the phone, so you never see it.`,
         `The link works once and expires in ${minutes} minutes.`,
-        `After showing the link, call check_phone_secret with name "${name}" to wait for it.`,
+        'Put the whole link in your reply, then end your turn and ask the user to say when they have sent it. Do not wait for it',
+        'first: on their phone (Remote Control) the user only sees your message once your turn ends. This PC keeps listening, so',
+        `nothing is lost. When the user says they sent it, call check_phone_secret with name "${name}".`,
       ].join('\n');
     },
 
@@ -83,7 +85,7 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
       const status = await phone.check(name, checkWaitMs);
       if (status === 'saved') return `Saved "${name}" from the phone.`;
       if (status === 'waiting') {
-        return 'Still waiting for the phone. Call check_phone_secret again to keep waiting. If the user says it failed, they can try again on the same link, or use add_secret (PC popup).';
+        return 'Still waiting for the phone. If the user has seen the link, call check_phone_secret again to keep waiting; if not, end your turn and send them the link first. If the user says it failed, they can try again on the same link, or use add_secret (PC popup).';
       }
       if (status === 'expired') return `The phone link for "${name}" expired. Nothing saved. Call add_secret_from_phone again for a new link.`;
       throw new Error(`No phone link is waiting for "${name}". Call add_secret_from_phone first.`);

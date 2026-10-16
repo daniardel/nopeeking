@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="brand/logo/lockup-on-violet.svg">
-    <img src="brand/logo/lockup.svg" alt="passClaude" width="420">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/daniardel/passclaude/main/brand/logo/lockup-on-violet.svg">
+    <img src="https://raw.githubusercontent.com/daniardel/passclaude/main/brand/logo/lockup.svg" alt="passClaude" width="420">
   </picture>
 </p>
 
@@ -13,7 +13,7 @@
   <a href="https://www.npmjs.com/package/passclaude"><img src="https://img.shields.io/npm/v/passclaude?color=5B2EFF" alt="npm"></a>
   <a href="https://github.com/daniardel/passclaude/actions/workflows/test.yml"><img src="https://github.com/daniardel/passclaude/actions/workflows/test.yml/badge.svg" alt="tests"></a>
   <img src="https://img.shields.io/badge/platform-Windows-17132E" alt="platform: Windows">
-  <a href="LICENSE"><img src="https://img.shields.io/npm/l/passclaude?color=FFC92E" alt="license"></a>
+  <a href="https://github.com/daniardel/passclaude/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/passclaude?color=FFC92E" alt="license"></a>
 </p>
 
 You never paste a password into the chat. You type it once, into a popup on your PC or a one-time encrypted link on your phone. After that Claude can *use* it, but passClaude's tools never return the value, so it stays out of the conversation, the transcript and the model. There are a few ways it can still get out: read "Not protected" below.
@@ -184,11 +184,11 @@ To try your copy in Claude Code: `claude mcp add --scope user passclaude -- node
 
 The phone page is `docs/index.html`, `docs/style.css`, `docs/app.js`, `docs/link.js`, `docs/e2e.js` and `docs/brand/`. The live copy is in the public [passclaude-phone](https://github.com/daniardel/passclaude-phone) repo. After changing any of these files, copy them there and push, or phone links keep opening the old page. To try it locally: `node scripts/serve.js docs`.
 
-The look (colours, fonts, the padlock) lives in [`brand/`](brand/README.md). After changing it, run `npm run brand` and commit what it writes; it also refreshes `docs/brand/`.
+The look (colours, fonts, the padlock) lives in [`brand/`](https://github.com/daniardel/passclaude/blob/main/brand/README.md). After changing it, run `npm run brand` and commit what it writes; it also refreshes `docs/brand/`.
 
 ## Reporting a security problem
 
-Please don't open a public issue. See [SECURITY.md](SECURITY.md).
+Please don't open a public issue. See [SECURITY.md](https://github.com/daniardel/passclaude/blob/main/SECURITY.md).
 
 ## License
 

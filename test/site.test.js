@@ -7,7 +7,8 @@ import { buildSite } from '../scripts/site/build.js';
 
 const CSP =
   "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'";
-const LINK_HOSTS = ['github.com', 'www.npmjs.com', 'nodejs.org', 'docs.claude.com'];
+const SITE_URL = 'https://daniardel.github.io/passclaude/';
+const LINK_HOSTS =['github.com', 'www.npmjs.com', 'nodejs.org', 'docs.claude.com'];
 
 /** Builds the site into a fresh temp folder, hands it to fn, then removes it. */
 function withBuild(fn) {
@@ -26,15 +27,12 @@ function files(dir) {
     .filter((f) => statSync(f).isFile());
 }
 
-/** Every URL a page or stylesheet names: tag attributes (href, src, og:image content) and CSS url(). */
+/** Every URL a page or stylesheet loads or links to: tag attributes (href, src) and CSS url(). */
 function refs(text) {
   const out = [];
   for (const m of text.matchAll(/<([a-zA-Z]+)\b([^>]*)>/g)) {
     const tag = m[1].toLowerCase();
-    for (const a of m[2].matchAll(/\s(href|src|content)="([^"]*)"/g)) {
-      if (a[1] === 'content' && !/property="og:image"/.test(m[2])) continue;
-      out.push({ tag, url: a[2] });
-    }
+    for (const a of m[2].matchAll(/\s(href|src)="([^"]*)"/g)) out.push({ tag, url: a[2] });
   }
   for (const m of text.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g)) out.push({ tag: 'css', url: m[1] });
   return out;
@@ -53,6 +51,15 @@ test('the built site has every file its pages and stylesheets load or link to', 
         assert.ok(existsSync(target), `${relative(dir, page)} names ${url}, which the build did not produce`);
       }
     }
+  });
+});
+
+test('a shared link shows the social image from its full address on the site itself', () => {
+  withBuild((dir) => {
+    const html = readFileSync(join(dir, 'index.html'), 'utf8');
+    assert.equal(/<meta property="og:url" content="([^"]*)">/.exec(html)?.[1], SITE_URL);
+    assert.equal(/<meta property="og:image" content="([^"]*)">/.exec(html)?.[1], `${SITE_URL}social-preview.png`);
+    assert.ok(existsSync(join(dir, 'social-preview.png')));
   });
 });
 

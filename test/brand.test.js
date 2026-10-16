@@ -85,3 +85,38 @@ test('every logo file is a self-contained SVG in brand colours, with no live tex
     for (const hex of svg.match(/#[0-9A-Fa-f]{6}\b/g) ?? []) assert.ok(palette.has(hex), `${name}: ${hex} is not a brand colour`);
   }
 });
+
+const fontRoles = Object.values(readTokens().font);
+
+test('every font weight in tokens.json has its .ttf and .woff2, with the licence beside them', () => {
+  for (const f of fontRoles) {
+    const licence = `OFL-${f.family.replace(/ /g, '')}.txt`;
+    for (const dir of ['assets/fonts', 'brand/web/fonts']) {
+      assert.match(readFileSync(root(`${dir}/${licence}`), 'utf8'), /SIL Open Font License, Version 1\.1/, `${dir}/${licence}`);
+    }
+    for (const file of Object.values(f.files)) {
+      assert.equal(readFileSync(root(`assets/fonts/${file}.ttf`)).readUInt32BE(0), 0x00010000, `${file}.ttf`);
+      assert.equal(readFileSync(root(`brand/web/fonts/${file}.woff2`)).subarray(0, 4).toString('latin1'), 'wOF2', `${file}.woff2`);
+    }
+  }
+});
+
+test('no font file is shipped without an entry in tokens.json', () => {
+  const known = new Set(fontRoles.flatMap((f) => Object.values(f.files)));
+  for (const dir of ['assets/fonts', 'brand/web/fonts']) {
+    for (const name of readdirSync(root(dir))) {
+      if (name.startsWith('OFL-')) continue;
+      assert.ok(known.has(name.replace(/\.(ttf|woff2)$/, '')), `${dir}/${name} is not in brand/tokens.json`);
+    }
+  }
+});
+
+test('outlines.json has every text the generated images need', () => {
+  const o = JSON.parse(readFileSync(root('brand/build/outlines.json'), 'utf8'));
+  for (const key of ['wordmark', 'tagline1', 'tagline2', 'footnote']) {
+    assert.match(o[key].d, /^M/, key);
+    assert.equal(o[key].box.length, 4, key);
+    assert.equal(o[key].unitsPerEm, 1000, key);
+  }
+  assert.equal(o.wordmark.text, 'passClaude');
+});

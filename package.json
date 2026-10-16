@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "test": "node --test",
-    "brand": "node scripts/brand/build.js"
+    "brand": "node scripts/brand/build.js",
+    "site": "node scripts/site/build.js"
   },
   "keywords": [
     "claude",

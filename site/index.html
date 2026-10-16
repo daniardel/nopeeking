@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>passClaude: Claude logs you in. Its eyes stay shut.</title>
+  <meta name="description" content="passClaude lets Claude Code use your passwords and API keys on Windows without ever being handed them. Free and open source.">
+  <meta name="theme-color" content="#5B2EFF">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="passClaude: Claude logs you in. Its eyes stay shut.">
+  <meta property="og:description" content="Let Claude Code use your passwords and API keys without ever being handed them. Free, open source, Windows.">
+  <meta property="og:image" content="social-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="brand/logo/mark.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="16x16 24x24 32x32 48x48 64x64 256x256">
+  <link rel="preload" href="brand/fonts/BricolageGrotesque-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="brand/tokens.css">
+  <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="hero on-dark">
+    <svg class="hero-rings" aria-hidden="true" width="760" height="760" viewBox="0 0 760 760"><circle cx="380" cy="380" r="378" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/><circle cx="380" cy="380" r="280" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/><circle cx="380" cy="380" r="180" fill="#FFC92E" fill-opacity="0.16"/></svg>
+
+    <nav class="wrap nav" aria-label="Main">
+      <a class="brand" href="./">
+        <img src="brand/logo/mark-yellow.svg" alt="" width="36" height="36">
+        <span>passClaude</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#limits">Security</a></li>
+        <li><a href="https://github.com/daniardel/passclaude">GitHub</a></li>
+      </ul>
+    </nav>
+
+    <div class="wrap hero-body">
+      <div class="hero-copy">
+        <p class="badge">Add-on for Claude Code · Windows</p>
+        <h1>Claude logs you in. <span class="hl">Its eyes stay shut.</span></h1>
+        <p class="lede">passClaude lets Claude Code use your passwords and API keys without ever being handed them. They stay in Windows Credential Manager. Claude only knows their names.</p>
+        <div class="actions">
+          <a class="btn btn-primary" href="https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v12M7 11l5 5 5-5M4.5 20.5h15"/></svg>
+            Download for Windows
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/daniardel/passclaude">View on GitHub</a>
+        </div>
+        <p class="fine">Free and open source. Needs Windows 10 or 11, Node.js 20+ and Claude Code.</p>
+      </div>
+
+      <figure class="sees" aria-labelledby="sees-title">
+        <div class="sees-head">
+          <figcaption id="sees-title" class="label">What Claude sees</figcaption>
+          <img src="brand/logo/mark.svg" alt="" width="40" height="40">
+        </div>
+        <ul class="sees-list">
+          <li><span><b>netflix</b><small>website password · netflix.com</small></span><span class="dots"><span aria-hidden="true">••••••</span><span class="sr">value hidden</span></span></li>
+          <li><span><b>github</b><small>website password · github.com</small></span><span class="dots"><span aria-hidden="true">••••••</span><span class="sr">value hidden</span></span></li>
+          <li><span><b>openai</b><small>API key · used in commands</small></span><span class="dots"><span aria-hidden="true">••••••</span><span class="sr">value hidden</span></span></li>
+        </ul>
+        <p class="sees-note">Names only. No passClaude tool ever returns a value.</p>
+      </figure>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="wrap install on-dark" aria-labelledby="install-title">
+      <div class="install-text">
+        <h2 id="install-title" class="label">Or install with one command</h2>
+        <pre class="cmd" id="install-cmd"><code><span class="kw">claude</span> mcp add --scope user passclaude -- npx -y passclaude</code></pre>
+      </div>
+      <button class="btn btn-copy" type="button" data-copy="install-cmd" hidden>
+        <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+        <span data-copy-label>Copy</span>
+      </button>
+    </section>
+
+    <section id="how" class="wrap how" aria-labelledby="how-title">
+      <h2 id="how-title" class="big">Three steps. Zero peeking.</h2>
+      <ol class="steps">
+        <li class="step step-yellow">
+          <div class="step-top">
+            <span class="step-n" aria-hidden="true">1</span>
+            <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="13" height="10" rx="2"/><path d="M6 18h6M9 14v4"/><rect x="16.5" y="9" width="5.5" height="11" rx="1.5"/></svg>
+          </div>
+          <h3>Save it once</h3>
+          <p>A popup opens on your PC, or Claude sends a one-time link to your phone. You type the password there, never in the chat.</p>
+        </li>
+        <li class="step step-white">
+          <div class="step-top">
+            <span class="step-n" aria-hidden="true">2</span>
+            <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9l-5 4z"/><path d="M8 10.5h8"/></svg>
+          </div>
+          <h3>Ask Claude to log in</h3>
+          <p>“Log me in to Netflix.” Claude opens the page in Chrome and clicks into the password box.</p>
+        </li>
+        <li class="step step-violet on-dark">
+          <div class="step-top">
+            <span class="step-n" aria-hidden="true">3</span>
+            <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M7.5 14h9"/></svg>
+          </div>
+          <h3>passClaude types it</h3>
+          <p>The password goes from Windows straight into the box, and only on the site it was saved for. Claude is never handed it.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="wrap keys" aria-labelledby="keys-title">
+      <div class="keys-text">
+        <p class="label">API keys too</p>
+        <h2 id="keys-title" class="mid">Run commands with a key Claude can’t read.</h2>
+        <p>Claude asks to run a command with your saved key. passClaude puts the key in for that one command, as an environment variable, and masks it in anything the command prints.</p>
+      </div>
+      <pre class="term" aria-label="Example: a command run with a saved key, its output masked"><code><span class="dim">Claude ›</span>
+run_with_secret  OPENAI_API_KEY ← <span class="kw">openai</span>
+<span class="dim">  curl … -H "Authorization: Bearer $env:OPENAI_API_KEY"</span>
+
+<span class="dim">output ›</span>
+  token used: <mark>••••(openai)</mark></code></pre>
+    </section>
+
+    <section class="wrap facts" aria-label="Requirements and limits">
+      <div class="card">
+        <h2 class="mid">What you need</h2>
+        <ul class="ticks">
+          <li>Windows 10 or 11</li>
+          <li><a href="https://nodejs.org">Node.js 20</a> or newer</li>
+          <li><a href="https://docs.claude.com/en/docs/claude-code/setup">Claude Code</a></li>
+          <li>For website logins: Chrome with Claude in Chrome</li>
+        </ul>
+        <p class="fine-dark">No account, no password manager, nothing to pay. Works from your phone with Claude Code Remote Control.</p>
+      </div>
+      <div class="card" id="limits">
+        <h2 class="mid">What it can’t stop</h2>
+        <ul class="limits">
+          <li>Claude Code can run commands as you. A Claude that has been tricked could read Credential Manager directly. The optional guard blocks the obvious ways; it’s a speed bump, not a wall.</li>
+          <li>Once typed, a password sits in the page’s password box, where the page’s scripts and Claude’s own browser tools can read it.</li>
+          <li>Masking catches the whole key, its common encodings and long pieces of it, but not every way a command could reshape it. Read commands before you approve them.</li>
+        </ul>
+        <p><a class="more" href="https://github.com/daniardel/passclaude#security-what-it-protects-and-what-it-doesnt">Read the full list of what it protects and what it doesn’t</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot on-dark">
+    <div class="wrap">
+      <div class="foot-cta">
+        <p class="big">Give Claude your logins. Keep your passwords.</p>
+        <a class="btn btn-primary btn-on-ink" href="https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd">Download for Windows</a>
+      </div>
+      <hr>
+      <div class="foot-row">
+        <p class="foot-note">
+          <img src="brand/logo/mark.svg" alt="" width="22" height="22">
+          passClaude is an independent open-source project. It is not made by Anthropic.
+        </p>
+        <ul class="foot-links">
+          <li><a href="https://github.com/daniardel/passclaude">GitHub</a></li>
+          <li><a href="https://github.com/daniardel/passclaude/blob/main/SECURITY.md">Security</a></li>
+          <li><a href="https://github.com/daniardel/passclaude/blob/main/LICENSE">MIT License</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

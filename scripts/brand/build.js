@@ -58,8 +58,8 @@ async function build() {
     writeAtomic(root(path), svg);
     console.log(`wrote ${path}`);
   }
-  writeAtomic(root('assets/passclaude.ico'), await iconIco());
-  console.log('wrote assets/passclaude.ico');
+  writeAtomic(root('assets/nopeeking.ico'), await iconIco());
+  console.log('wrote assets/nopeeking.ico');
   writeAtomic(root('brand/social-preview.png'), await socialPng());
   console.log('wrote brand/social-preview.png');
 }

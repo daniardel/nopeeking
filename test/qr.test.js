@@ -21,7 +21,7 @@ function decode(matrix, scale = 4) {
 }
 
 const LINK =
-  'https://daniardel.github.io/passclaude-phone/#v=1&t=pc-4mY0bq2V8xYk3Jt1Zr&k=BHq0yXk3l7r6nJ5Qd2v9Wm8Yt1Kp4Hs6Lf3Ga0Ce7Ub2Ri5Nj9Ox1Tz4Vw8Sq3Mg6Dh0Ay2Ec5Fb7Il9Pn1Kr&n=netflix&kind=web&s=netflix.com&e=1792160000&r=https%3A%2F%2Fntfy.sh';
+  'https://daniardel.github.io/nopeeking-phone/#v=1&t=pc-4mY0bq2V8xYk3Jt1Zr&k=BHq0yXk3l7r6nJ5Qd2v9Wm8Yt1Kp4Hs6Lf3Ga0Ce7Ub2Ri5Nj9Ox1Tz4Vw8Sq3Mg6Dh0Ay2Ec5Fb7Il9Pn1Kr&n=netflix&kind=web&s=netflix.com&e=1792160000&r=https%3A%2F%2Fntfy.sh';
 
 test('a real phone link encodes to a QR code that decodes back to exactly the link', () => {
   assert.equal(decode(encodeQr(LINK)), LINK);

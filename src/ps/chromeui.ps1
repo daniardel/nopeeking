@@ -43,7 +43,7 @@ function Get-AddressBarText([IntPtr]$Hwnd) {
 
 # True if keyboard focus is on a password box in the window's process.
 function Test-FocusIsPassword([IntPtr]$Hwnd) {
-  $windowPid = [PassClaude.Win]::ProcessId($Hwnd)
+  $windowPid = [NoPeeking.Win]::ProcessId($Hwnd)
   for ($i = 0; $i -lt 5; $i++) {
     try {
       $focused = $AE::FocusedElement

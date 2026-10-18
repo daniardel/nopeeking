@@ -10,7 +10,7 @@ function New-QrWindow([string]$Name, [string]$Kind, [string]$PathData, [int]$Mod
   $smallPadlock = Get-PcPadlockXaml
   $window = New-PcWindow @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="passClaude" Width="456" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Title="NoPeeking" Width="456" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" WindowStartupLocation="CenterScreen" Topmost="True" ShowInTaskbar="True"
         FontFamily="{DynamicResource FontBody}" Foreground="{DynamicResource Ink}" UseLayoutRounding="True">
   <Border Margin="32,24,32,40" CornerRadius="14" Background="{DynamicResource White}" BorderBrush="#2E17132E" BorderThickness="1">
@@ -21,7 +21,7 @@ function New-QrWindow([string]$Name, [string]$Kind, [string]$PathData, [int]$Mod
       <Grid x:Name="TitleBar" Height="40" Background="Transparent">
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
           <Viewbox Width="16" Height="16">$smallPadlock</Viewbox>
-          <TextBlock Text="passClaude" FontSize="12" FontWeight="Medium" Margin="8,0,0,0" VerticalAlignment="Center"/>
+          <TextBlock Text="NoPeeking" FontSize="12" FontWeight="Medium" Margin="8,0,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <Button x:Name="CloseX" Style="{DynamicResource TitleCloseButton}" HorizontalAlignment="Right" AutomationProperties.Name="Close"/>
       </Grid>

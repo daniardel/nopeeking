@@ -13,7 +13,7 @@ test('POWERSHELL_EXE is the absolute path of the system Windows PowerShell', { s
 });
 
 test('runPs ignores a powershell.exe planted in the current directory', { skip }, async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'passclaude-plant-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nopeeking-plant-'));
   const home = process.cwd();
   // libuv only searches the current directory first when this variable is unset, so unset it to make the test meaningful.
   const guard = process.env.NoDefaultCurrentDirectoryInExePath;
@@ -25,7 +25,7 @@ test('runPs ignores a powershell.exe planted in the current directory', { skip }
     const res = await runPs('cred.ps1', ['list']);
     assert.equal(res.code, 0);
     const lines = res.stdout.split('\n').filter(Boolean);
-    assert.ok(lines.every((line) => line.startsWith('passclaude:') && line.includes('\t')), 'cred.ps1 output expected');
+    assert.ok(lines.every((line) => line.startsWith('nopeeking:') && line.includes('\t')), 'cred.ps1 output expected');
   } finally {
     process.chdir(home);
     if (guard !== undefined) process.env.NoDefaultCurrentDirectoryInExePath = guard;

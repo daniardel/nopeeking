@@ -49,7 +49,7 @@ export function createVault({ run = runPs } = {}) {
         .filter((line) => line.includes('\t'))
         .map((line) => {
           const tab = line.indexOf('\t');
-          return decodeMeta(line.slice(0, tab).replace(/^passclaude:/i, ''), line.slice(tab + 1).trim());
+          return decodeMeta(line.slice(0, tab).replace(/^nopeeking:/i, ''), line.slice(tab + 1).trim());
         })
         .filter(Boolean)
         .sort((a, b) => a.name.localeCompare(b.name));

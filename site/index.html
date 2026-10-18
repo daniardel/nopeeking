@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
-  <title>passClaude: Claude logs you in. Its eyes stay shut.</title>
-  <meta name="description" content="passClaude lets Claude Code use your passwords and API keys on Windows without ever being handed them. Free and open source.">
+  <title>NoPeeking: Claude logs you in. Its eyes stay shut.</title>
+  <meta name="description" content="NoPeeking lets Claude Code use your passwords and API keys on Windows without ever being handed them. Free and open source.">
   <meta name="theme-color" content="#5B2EFF">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="passClaude: Claude logs you in. Its eyes stay shut.">
+  <meta property="og:title" content="NoPeeking: Claude logs you in. Its eyes stay shut.">
   <meta property="og:description" content="Let Claude Code use your passwords and API keys without ever being handed them. Free, open source, Windows.">
-  <meta property="og:url" content="https://daniardel.github.io/passclaude/">
-  <meta property="og:image" content="https://daniardel.github.io/passclaude/social-preview.png">
+  <meta property="og:url" content="https://daniardel.github.io/nopeeking/">
+  <meta property="og:image" content="https://daniardel.github.io/nopeeking/social-preview.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="brand/logo/mark.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="16x16 24x24 32x32 48x48 64x64 256x256">
@@ -30,12 +30,12 @@
     <nav class="wrap nav" aria-label="Main">
       <a class="brand" href="./">
         <img src="brand/logo/mark-yellow.svg" alt="" width="36" height="36">
-        <span>passClaude</span>
+        <span>NoPeeking</span>
       </a>
       <ul class="nav-links">
         <li><a href="#how">How it works</a></li>
         <li><a href="#limits">Security</a></li>
-        <li><a href="https://github.com/daniardel/passclaude">GitHub</a></li>
+        <li><a href="https://github.com/daniardel/nopeeking">GitHub</a></li>
       </ul>
     </nav>
 
@@ -43,13 +43,13 @@
       <div class="hero-copy">
         <p class="badge">Add-on for Claude Code · Windows</p>
         <h1>Claude logs you in. <span class="hl">Its eyes stay shut.</span></h1>
-        <p class="lede">passClaude lets Claude Code use your passwords and API keys without ever being handed them. They stay in Windows Credential Manager. Claude only knows their names.</p>
+        <p class="lede">NoPeeking lets Claude Code use your passwords and API keys without ever being handed them. They stay in Windows Credential Manager. Claude only knows their names.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd">
+          <a class="btn btn-primary" href="https://github.com/daniardel/nopeeking/releases/latest/download/install-nopeeking.cmd">
             <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v12M7 11l5 5 5-5M4.5 20.5h15"/></svg>
             Download for Windows
           </a>
-          <a class="btn btn-ghost" href="https://github.com/daniardel/passclaude">View on GitHub</a>
+          <a class="btn btn-ghost" href="https://github.com/daniardel/nopeeking">View on GitHub</a>
         </div>
         <p class="fine">Free and open source. Needs Windows 10 or 11, Node.js 20+ and Claude Code.</p>
       </div>
@@ -64,7 +64,7 @@
           <li><span><b>github</b><small>website password · github.com</small></span><span class="dots"><span aria-hidden="true">••••••</span><span class="sr">value hidden</span></span></li>
           <li><span><b>openai</b><small>API key · used in commands</small></span><span class="dots"><span aria-hidden="true">••••••</span><span class="sr">value hidden</span></span></li>
         </ul>
-        <p class="sees-note">Names only. No passClaude tool ever returns a value.</p>
+        <p class="sees-note">Names only. No NoPeeking tool ever returns a value.</p>
       </figure>
     </div>
   </header>
@@ -73,7 +73,7 @@
     <section class="wrap install on-dark" aria-labelledby="install-title">
       <div class="install-text">
         <h2 id="install-title" class="label">Or install with one command</h2>
-        <pre class="cmd" id="install-cmd"><code><span class="kw">claude</span> mcp add --scope user passclaude -- npx -y passclaude</code></pre>
+        <pre class="cmd" id="install-cmd"><code><span class="kw">claude</span> mcp add --scope user nopeeking -- npx -y nopeeking</code></pre>
       </div>
       <button class="btn btn-copy" type="button" data-copy="install-cmd" hidden>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
@@ -105,7 +105,7 @@
             <span class="step-n" aria-hidden="true">3</span>
             <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M7.5 14h9"/></svg>
           </div>
-          <h3>passClaude types it</h3>
+          <h3>NoPeeking types it</h3>
           <p>The password goes from Windows straight into the box, and only on the site it was saved for. Claude is never handed it.</p>
         </li>
       </ol>
@@ -115,7 +115,7 @@
       <div class="keys-text">
         <p class="label">API keys too</p>
         <h2 id="keys-title" class="mid">Run commands with a key Claude can’t read.</h2>
-        <p>Claude asks to run a command with your saved key. passClaude puts the key in for that one command, as an environment variable, and masks it in anything the command prints.</p>
+        <p>Claude asks to run a command with your saved key. NoPeeking puts the key in for that one command, as an environment variable, and masks it in anything the command prints.</p>
       </div>
       <pre class="term" aria-label="Example: a command run with a saved key, its output masked"><code><span class="dim">Claude ›</span>
 run_with_secret  OPENAI_API_KEY ← <span class="kw">openai</span>
@@ -143,7 +143,7 @@ run_with_secret  OPENAI_API_KEY ← <span class="kw">openai</span>
           <li>Once typed, a password sits in the page’s password box, where the page’s scripts and Claude’s own browser tools can read it.</li>
           <li>Masking catches the whole key, its common encodings and long pieces of it, but not every way a command could reshape it. Read commands before you approve them.</li>
         </ul>
-        <p><a class="more" href="https://github.com/daniardel/passclaude#security-what-it-protects-and-what-it-doesnt">Read the full list of what it protects and what it doesn’t</a></p>
+        <p><a class="more" href="https://github.com/daniardel/nopeeking#security-what-it-protects-and-what-it-doesnt">Read the full list of what it protects and what it doesn’t</a></p>
       </div>
     </section>
   </main>
@@ -152,18 +152,18 @@ run_with_secret  OPENAI_API_KEY ← <span class="kw">openai</span>
     <div class="wrap">
       <div class="foot-cta">
         <p class="big">Give Claude your logins. Keep your passwords.</p>
-        <a class="btn btn-primary btn-on-ink" href="https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd">Download for Windows</a>
+        <a class="btn btn-primary btn-on-ink" href="https://github.com/daniardel/nopeeking/releases/latest/download/install-nopeeking.cmd">Download for Windows</a>
       </div>
       <hr>
       <div class="foot-row">
         <p class="foot-note">
           <img src="brand/logo/mark.svg" alt="" width="22" height="22">
-          passClaude is an independent open-source project. It is not made by Anthropic.
+          NoPeeking is an independent open-source project. It is not made by Anthropic.
         </p>
         <ul class="foot-links">
-          <li><a href="https://github.com/daniardel/passclaude">GitHub</a></li>
-          <li><a href="https://github.com/daniardel/passclaude/blob/main/SECURITY.md">Security</a></li>
-          <li><a href="https://github.com/daniardel/passclaude/blob/main/LICENSE">MIT License</a></li>
+          <li><a href="https://github.com/daniardel/nopeeking">GitHub</a></li>
+          <li><a href="https://github.com/daniardel/nopeeking/blob/main/SECURITY.md">Security</a></li>
+          <li><a href="https://github.com/daniardel/nopeeking/blob/main/LICENSE">MIT License</a></li>
         </ul>
       </div>
     </div>

@@ -58,21 +58,21 @@ test('tool results are text; refusals and invalid input come back marked as erro
   await client.close();
 });
 
-test('PASSCLAUDE_NOTIFY=off (or 0, false, no) turns the typed notification off', () => {
+test('NOPEEKING_NOTIFY=off (or 0, false, no) turns the typed notification off', () => {
   assert.equal(createDeps({}).config.notify, true);
   for (const off of ['off', 'OFF', '0', 'false', 'False', 'no', ' off ']) {
-    assert.equal(createDeps({ PASSCLAUDE_NOTIFY: off }).config.notify, false, JSON.stringify(off));
+    assert.equal(createDeps({ NOPEEKING_NOTIFY: off }).config.notify, false, JSON.stringify(off));
   }
   for (const on of ['on', '1', 'true', 'yes', '']) {
-    assert.equal(createDeps({ PASSCLAUDE_NOTIFY: on }).config.notify, true, JSON.stringify(on));
+    assert.equal(createDeps({ NOPEEKING_NOTIFY: on }).config.notify, true, JSON.stringify(on));
   }
 });
 
 test('createDeps reads the relay and page from the environment, then package.json', () => {
-  const deps = createDeps({ PASSCLAUDE_NTFY_URL: 'https://relay.example/', PASSCLAUDE_PAGE_URL: 'https://page.example/' });
+  const deps = createDeps({ NOPEEKING_NTFY_URL: 'https://relay.example/', NOPEEKING_PAGE_URL: 'https://page.example/' });
   assert.equal(deps.config.ntfyUrl, 'https://relay.example');
   assert.equal(deps.config.pageUrl, 'https://page.example/');
   const defaults = createDeps({});
   assert.equal(defaults.config.ntfyUrl, 'https://ntfy.sh');
-  assert.equal(defaults.config.pageUrl, pkg.passclaude.pageUrl);
+  assert.equal(defaults.config.pageUrl, pkg.nopeeking.pageUrl);
 });

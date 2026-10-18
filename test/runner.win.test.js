@@ -64,7 +64,7 @@ test('caps very large output', { skip }, async () => {
 });
 
 test('ignores a powershell.exe planted in the current directory', { skip }, async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'passclaude-plant-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nopeeking-plant-'));
   const home = process.cwd();
   // libuv only searches the current directory first when this variable is unset, so unset it to make the test meaningful.
   const guard = process.env.NoDefaultCurrentDirectoryInExePath;
@@ -106,12 +106,12 @@ test('passes non-ASCII command text through unchanged', { skip }, async () => {
 });
 
 test('runs from a temporary script file and removes it afterwards', { skip }, async () => {
-  const countScripts = () => fs.readdirSync(os.tmpdir()).filter((f) => /^passclaude-.*\.ps1$/.test(f)).length;
+  const countScripts = () => fs.readdirSync(os.tmpdir()).filter((f) => /^nopeeking-.*\.ps1$/.test(f)).length;
   const before = countScripts();
   // $PSCommandPath is the script the command runs from, so this shows where the command came from.
   const r = await runCommand({ command: 'Write-Output $PSCommandPath' });
   const scriptPath = r.stdout.trim();
-  assert.match(path.basename(scriptPath), /^passclaude-.*\.ps1$/, `stdout was: ${r.stdout}`);
+  assert.match(path.basename(scriptPath), /^nopeeking-.*\.ps1$/, `stdout was: ${r.stdout}`);
   assert.equal(fs.existsSync(scriptPath), false);
   assert.ok(countScripts() <= before, 'a temporary script file was left behind');
 });
@@ -167,7 +167,7 @@ test('a command ending in a trailing backtick does not swallow the exit-code che
 });
 
 test('reports that the command could not be prepared when the temporary folder is missing', { skip }, async () => {
-  const missing = path.join(os.tmpdir(), `passclaude-missing-${Date.now()}`);
+  const missing = path.join(os.tmpdir(), `nopeeking-missing-${Date.now()}`);
   assert.equal(fs.existsSync(missing), false);
   const savedTemp = process.env.TEMP;
   const savedTmp = process.env.TMP;
@@ -192,7 +192,7 @@ test('returns promptly when a grandchild keeps the output pipes open after Power
 
 test('stopAll stops a running command and removes its script file', { skip }, async () => {
   // The command writes the path of its own script file to a marker, so the test knows which file to look for.
-  const marker = path.join(os.tmpdir(), `passclaude-marker-${process.pid}-${Date.now()}.txt`);
+  const marker = path.join(os.tmpdir(), `nopeeking-marker-${process.pid}-${Date.now()}.txt`);
   const started = Date.now();
   const pending = runCommand({ command: `Set-Content -LiteralPath '${marker}' -Value $PSCommandPath; Start-Sleep -Seconds 30`, timeoutSec: 60 });
   try {
@@ -201,7 +201,7 @@ test('stopAll stops a running command and removes its script file', { skip }, as
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     const scriptPath = fs.readFileSync(marker, 'utf8').trim();
-    assert.match(path.basename(scriptPath), /^passclaude-.*\.ps1$/);
+    assert.match(path.basename(scriptPath), /^nopeeking-.*\.ps1$/);
     stopAll();
     const r = await pending;
     assert.ok(Date.now() - started < 10_000, 'the command was not stopped');
@@ -214,7 +214,7 @@ test('stopAll stops a running command and removes its script file', { skip }, as
 });
 
 test('stopAll stops several running commands at once, within the MCP client\'s 2 seconds', { skip }, async () => {
-  const markers = [0, 1, 2].map((i) => path.join(os.tmpdir(), `passclaude-marker-${process.pid}-${Date.now()}-${i}.txt`));
+  const markers = [0, 1, 2].map((i) => path.join(os.tmpdir(), `nopeeking-marker-${process.pid}-${Date.now()}-${i}.txt`));
   const runs = markers.map((m) => runCommand({ command: `Set-Content -LiteralPath '${m}' -Value x; Start-Sleep -Seconds 30`, timeoutSec: 60 }));
   try {
     const started = Date.now();

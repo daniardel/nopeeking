@@ -39,12 +39,12 @@ test('installGuard copies the guard, backs up settings and registers the hook on
   let question = '';
   assert.equal(await installGuard({ home, ask: async (q) => { question = q; return true; }, log: quiet }), 0);
   assert.match(question, /\(y\/N\)/);
-  const guardPath = path.join(dir, 'passclaude', 'guard.cjs');
+  const guardPath = path.join(dir, 'nopeeking', 'guard.cjs');
   assert.ok(fs.existsSync(guardPath));
   const settings = JSON.parse(fs.readFileSync(path.join(dir, 'settings.json'), 'utf8'));
   assert.equal(settings.model, 'opus');
   assert.equal(settings.hooks.PreToolUse[0].hooks[0].command, guardCommand(guardPath));
-  assert.equal(fs.readdirSync(dir).filter((f) => f.startsWith('settings.json.passclaude-backup-')).length, 1);
+  assert.equal(fs.readdirSync(dir).filter((f) => f.startsWith('settings.json.nopeeking-backup-')).length, 1);
 
   // A second run does not ask and does not add a second entry.
   assert.equal(await installGuard({ home, ask: async () => assert.fail('asked twice'), log: quiet }), 0);
@@ -59,13 +59,13 @@ test('installGuard refuses to touch settings it cannot read', async (t) => {
   assert.equal(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf8'), '{ broken');
 });
 
-test('installGuard restores the guard file when only its passclaude folder was deleted', async (t) => {
+test('installGuard restores the guard file when only its nopeeking folder was deleted', async (t) => {
   const home = tempHome(t);
   const dir = path.join(home, '.claude');
   fs.mkdirSync(dir);
-  const guardPath = path.join(dir, 'passclaude', 'guard.cjs');
+  const guardPath = path.join(dir, 'nopeeking', 'guard.cjs');
   assert.equal(await installGuard({ home, ask: async () => true, log: quiet }), 0);
-  fs.rmSync(path.join(dir, 'passclaude'), { recursive: true, force: true });
+  fs.rmSync(path.join(dir, 'nopeeking'), { recursive: true, force: true });
 
   // The hook entry is still in settings, so this is the "already installed" path: no question, the file comes back.
   assert.equal(await installGuard({ home, ask: async () => assert.fail('asked again'), log: quiet }), 0);

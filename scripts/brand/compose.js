@@ -21,7 +21,7 @@ export function lockupSvg(markSvg, wordmark, color) {
   const tx = MARK + GAP - x0 * s;
   const ty = BODY_MID - TEXT_H / 2 - y0 * s;
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width * 2}" height="${MARK * 2}" viewBox="0 0 ${width} ${MARK}" role="img" aria-label="passClaude">`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width * 2}" height="${MARK * 2}" viewBox="0 0 ${width} ${MARK}" role="img" aria-label="NoPeeking">`,
     `  ${svgInner(markSvg)}`,
     `  <path transform="translate(${r(tx)} ${r(ty)}) scale(${r(s, 5)})" fill="${color}" d="${wordmark.d}"/>`,
     '</svg>',

@@ -7,7 +7,7 @@ import { buildSite } from '../scripts/site/build.js';
 
 const CSP =
   "default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'";
-const SITE_URL = 'https://daniardel.github.io/passclaude/';
+const SITE_URL = 'https://daniardel.github.io/nopeeking/';
 const LINK_HOSTS =['github.com', 'www.npmjs.com', 'nodejs.org', 'docs.claude.com'];
 
 /** Builds the site into a fresh temp folder, hands it to fn, then removes it. */
@@ -89,15 +89,15 @@ test('the page works under its own CSP: no inline scripts or styles', () => {
   });
 });
 
-test('the page says what passClaude does, how to get it and what it does not protect', () => {
+test('the page says what NoPeeking does, how to get it and what it does not protect', () => {
   withBuild((dir) => {
     const raw = readFileSync(join(dir, 'index.html'), 'utf8');
     const html = `${raw}\n${raw.replace(/<[^>]+>/g, '')}`; // markup for links, plain text for words split by <span>s
     for (const text of [
-      'claude mcp add --scope user passclaude -- npx -y passclaude',
-      'https://github.com/daniardel/passclaude/releases/latest/download/install-passclaude.cmd',
-      'https://github.com/daniardel/passclaude#security-what-it-protects-and-what-it-doesnt',
-      'https://github.com/daniardel/passclaude/blob/main/LICENSE',
+      'claude mcp add --scope user nopeeking -- npx -y nopeeking',
+      'https://github.com/daniardel/nopeeking/releases/latest/download/install-nopeeking.cmd',
+      'https://github.com/daniardel/nopeeking#security-what-it-protects-and-what-it-doesnt',
+      'https://github.com/daniardel/nopeeking/blob/main/LICENSE',
       'OPENAI_API_KEY',
       '••••(openai)',
       'not made by Anthropic',
@@ -130,7 +130,7 @@ test('buildSite refuses to clear a folder it did not make', () => {
   try {
     mkdirSync(join(dir, 'mine'));
     writeFileSync(join(dir, 'mine', 'keep.txt'), 'kept');
-    assert.throws(() => buildSite(join(dir, 'mine')), /not a passClaude site build/);
+    assert.throws(() => buildSite(join(dir, 'mine')), /not a NoPeeking site build/);
     assert.equal(readFileSync(join(dir, 'mine', 'keep.txt'), 'utf8'), 'kept');
   } finally {
     rmSync(dir, { recursive: true, force: true });

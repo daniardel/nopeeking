@@ -59,7 +59,7 @@ test('the typed notification says what was typed where, stays on top and never t
 test('the QR window shows a code a phone can scan back to exactly the link, with a countdown', { skip }, async () => {
   const dir = mkdtempSync(join(tmpdir(), 'pc-ui-'));
   try {
-    const link = 'https://daniardel.github.io/passclaude-phone/#v=1&t=pc-abc&k=' + 'Bx9'.repeat(29) + '&n=netflix&kind=web&s=netflix.com&e=1792160000';
+    const link = 'https://daniardel.github.io/nopeeking-phone/#v=1&t=pc-abc&k=' + 'Bx9'.repeat(29) + '&n=netflix&kind=web&s=netflix.com&e=1792160000';
     const matrix = encodeQr(link);
     const request = join(dir, 'request.json');
     writeFileSync(request, JSON.stringify({
@@ -81,7 +81,7 @@ test('a very long link (long name, long site, own relay) still fits the QR windo
   try {
     const site = `${'login.'.repeat(16)}example-company.com`;
     const name = 'a'.repeat(64);
-    const link = `https://pages.example.org/passclaude-phone/#v=1&t=pc-abcdefghijklmnopqrstu&k=${'Bx9'.repeat(29)}&n=${name}&kind=web&s=${site}&e=1792160000&r=https%3A%2F%2Fntfy.example.org`;
+    const link = `https://pages.example.org/nopeeking-phone/#v=1&t=pc-abcdefghijklmnopqrstu&k=${'Bx9'.repeat(29)}&n=${name}&kind=web&s=${site}&e=1792160000&r=https%3A%2F%2Fntfy.example.org`;
     assert.ok(link.length >= 400, `${link.length} characters`);
     const matrix = encodeQr(link);
     const request = join(dir, 'request.json');
@@ -96,7 +96,7 @@ test('a very long link (long name, long site, own relay) still fits the QR windo
 
 // System.Drawing skips PNG entries, so for 256 px it falls back to the largest bitmap. Windows itself and WPF read them.
 test('the app icon opens at every size in WPF, and in System.Drawing without failing', { skip }, () => {
-  const ico = fileURLToPath(new URL('../assets/passclaude.ico', import.meta.url));
+  const ico = fileURLToPath(new URL('../assets/nopeeking.ico', import.meta.url));
   const out = ps([
     '-Command',
     'Add-Type -AssemblyName System.Drawing, PresentationCore; ' +

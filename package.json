@@ -1,10 +1,10 @@
 {
-  "name": "passclaude",
-  "version": "0.1.0",
+  "name": "nopeeking",
+  "version": "0.2.0",
   "description": "Let Claude Code log into websites and use your API keys without ever seeing them.",
   "type": "module",
   "bin": {
-    "passclaude": "src/cli.js"
+    "nopeeking": "src/cli.js"
   },
   "files": [
     "src",
@@ -36,8 +36,8 @@
     "remote-control"
   ],
   "license": "MIT",
-  "passclaude": {
-    "pageUrl": "https://daniardel.github.io/passclaude-phone/"
+  "nopeeking": {
+    "pageUrl": "https://daniardel.github.io/nopeeking-phone/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
@@ -45,11 +45,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daniardel/passclaude.git"
+    "url": "git+https://github.com/daniardel/nopeeking.git"
   },
-  "homepage": "https://github.com/daniardel/passclaude#readme",
+  "homepage": "https://github.com/daniardel/nopeeking#readme",
   "bugs": {
-    "url": "https://github.com/daniardel/passclaude/issues"
+    "url": "https://github.com/daniardel/nopeeking/issues"
   },
   "devDependencies": {
     "jsqr": "^1.4.0",

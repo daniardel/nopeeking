@@ -1,4 +1,4 @@
-// `node src/cli.js install-guard`: copies the guard to ~/.claude/passclaude/ and registers it in
+// `node src/cli.js install-guard`: copies the guard to ~/.claude/nopeeking/ and registers it in
 // ~/.claude/settings.json, after showing the exact change and asking first. Backs the file up before writing.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -7,8 +7,8 @@ import readline from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
 export const GUARD_SOURCE = fileURLToPath(new URL('../hook/guard.cjs', import.meta.url));
-// The MCP tool is listed too: a run_with_secret command can run passClaude's own cred.ps1 and print a saved value.
-export const MATCHER = 'Bash|PowerShell|mcp__passclaude__run_with_secret';
+// The MCP tool is listed too: a run_with_secret command can run NoPeeking's own cred.ps1 and print a saved value.
+export const MATCHER = 'Bash|PowerShell|mcp__nopeeking__run_with_secret';
 
 export function guardCommand(guardPath) {
   return `node "${guardPath.replace(/\\/g, '/')}"`;
@@ -36,7 +36,7 @@ async function askYesNo(question) {
 export async function installGuard({ home = os.homedir(), ask = askYesNo, log = console.log } = {}) {
   const claudeDir = path.join(home, '.claude');
   const settingsPath = path.join(claudeDir, 'settings.json');
-  const guardPath = path.join(claudeDir, 'passclaude', 'guard.cjs');
+  const guardPath = path.join(claudeDir, 'nopeeking', 'guard.cjs');
   const command = guardCommand(guardPath);
 
   let current = {};
@@ -53,13 +53,13 @@ export async function installGuard({ home = os.homedir(), ask = askYesNo, log = 
   const { settings, changed } = addGuardHook(current, command);
   if (!changed) {
     fs.mkdirSync(path.dirname(guardPath), { recursive: true }); // the hook entry can outlive this folder
-    fs.copyFileSync(GUARD_SOURCE, guardPath); // refresh the copy in case passClaude was updated
-    log('The passClaude guard is already installed.');
+    fs.copyFileSync(GUARD_SOURCE, guardPath); // refresh the copy in case NoPeeking was updated
+    log('The NoPeeking guard is already installed.');
     return 0;
   }
 
   const entry = { matcher: MATCHER, hooks: [{ type: 'command', command }] };
-  log(`This adds the passClaude guard to ${settingsPath}:\n`);
+  log(`This adds the NoPeeking guard to ${settingsPath}:\n`);
   log(JSON.stringify({ hooks: { PreToolUse: [entry] } }, null, 2));
   log('\nIt blocks shell commands that try to read saved secrets directly. Your current settings are backed up first.');
   if (!(await ask('Add it? (y/N) '))) {
@@ -70,7 +70,7 @@ export async function installGuard({ home = os.homedir(), ask = askYesNo, log = 
   fs.mkdirSync(path.dirname(guardPath), { recursive: true });
   fs.copyFileSync(GUARD_SOURCE, guardPath);
   if (fs.existsSync(settingsPath)) {
-    const backup = `${settingsPath}.passclaude-backup-${Date.now()}`;
+    const backup = `${settingsPath}.nopeeking-backup-${Date.now()}`;
     fs.copyFileSync(settingsPath, backup);
     log(`Backup saved: ${backup}`);
   }

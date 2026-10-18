@@ -1,25 +1,25 @@
-<# : passClaude installer. Double-click this file to add passClaude to Claude Code for your Windows user.
+<# : NoPeeking installer. Double-click this file to add NoPeeking to Claude Code for your Windows user.
 @echo off
-rem All it runs is: claude mcp add --scope user passclaude -- npx -y passclaude
+rem All it runs is: claude mcp add --scope user nopeeking -- npx -y nopeeking
 rem These first lines are a batch file that starts Windows PowerShell on the rest of this same file, which shows the
 rem installer window. Everything below is plain text: open the file in Notepad to read it.
 rem Full paths, and never look in the current folder for programs: a double-click starts this file in its own folder
 rem (often Downloads), where a planted powershell.exe, cmd.exe, node.exe or claude.exe must never run.
 set "NoDefaultCurrentDirectoryInExePath=1"
-set "PASSCLAUDE_INSTALLER=%~f0"
-rem Test mode (passClaude's own tests) draws the screens into a folder and installs nothing. Only an argument turns it
+set "NOPEEKING_INSTALLER=%~f0"
+rem Test mode (NoPeeking's own tests) draws the screens into a folder and installs nothing. Only an argument turns it
 rem on, never a variable left over from somewhere else.
-set "PASSCLAUDE_INSTALLER_TEST="
-if "%~1"=="--render-screens" set "PASSCLAUDE_INSTALLER_TEST=%~2"
-"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create([IO.File]::ReadAllText($env:PASSCLAUDE_INSTALLER)))"
+set "NOPEEKING_INSTALLER_TEST="
+if "%~1"=="--render-screens" set "NOPEEKING_INSTALLER_TEST=%~2"
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create([IO.File]::ReadAllText($env:NOPEEKING_INSTALLER)))"
 exit /b %errorlevel%
 #>
 
 $ErrorActionPreference = 'Stop'
-$Command = 'claude mcp add --scope user passclaude -- npx -y passclaude'
+$Command = 'claude mcp add --scope user nopeeking -- npx -y nopeeking'
 $NodeUrl = 'https://nodejs.org'
 $ClaudeUrl = 'https://docs.claude.com/en/docs/claude-code/setup'
-$HelpUrl = 'https://github.com/daniardel/passclaude#install'
+$HelpUrl = 'https://github.com/daniardel/nopeeking#install'
 
 function Test-NodeVersion([string]$Version) {
   if ($Version -match '^v?(\d+)\.') { return [int]$Matches[1] -ge 20 }
@@ -53,16 +53,16 @@ function Start-Hidden([string]$CommandLine) {
 # Without WPF (rare: Windows Server Core), say the same things in the console.
 function Install-InConsole {
   Write-Host ''
-  Write-Host '  passClaude installer'
+  Write-Host '  NoPeeking installer'
   Write-Host ''
   if (-not (Test-NodeVersion (Get-NodeVersion))) {
-    Write-Host "  passClaude needs Node.js 20 or newer. Install the LTS version from $NodeUrl, then open this file again."
+    Write-Host "  NoPeeking needs Node.js 20 or newer. Install the LTS version from $NodeUrl, then open this file again."
   } elseif (-not (Test-ClaudeInstalled)) {
     Write-Host "  Claude Code was not found. Install it first: $ClaudeUrl"
   } else {
-    & cmd.exe /d /c 'claude mcp get passclaude >nul 2>nul'
+    & cmd.exe /d /c 'claude mcp get nopeeking >nul 2>nul'
     if ($LASTEXITCODE -eq 0) {
-      Write-Host '  passClaude is already installed. If Claude Code does not show it, restart Claude Code.'
+      Write-Host '  NoPeeking is already installed. If Claude Code does not show it, restart Claude Code.'
     } else {
       & cmd.exe /d /c $Command
       if ($LASTEXITCODE -eq 0) {
@@ -85,7 +85,7 @@ try {
 
 $Xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Install passClaude" Width="560" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True"
+        Title="Install NoPeeking" Width="560" SizeToContent="Height" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         FontFamily="Segoe UI" Foreground="#17132E">
   <Window.Resources>
@@ -197,7 +197,7 @@ $Xaml = @'
             </Viewbox>
           </Border>
           <StackPanel Margin="18,0,0,0" VerticalAlignment="Center">
-            <TextBlock x:Name="Heading" Text="Install passClaude" FontFamily="Segoe UI Black" FontSize="28" Foreground="#FFFFFF"/>
+            <TextBlock x:Name="Heading" Text="Install NoPeeking" FontFamily="Segoe UI Black" FontSize="28" Foreground="#FFFFFF"/>
             <TextBlock Text="For Windows &#183; free and open source" FontSize="14" Foreground="#E4DCFF" Margin="0,2,0,0"/>
           </StackPanel>
         </StackPanel>
@@ -230,7 +230,7 @@ $Xaml = @'
           <Button x:Name="HelpLink" Content="What does this change?" Style="{StaticResource LinkButton}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="CloseButton" Content="Close" Style="{StaticResource Plain}"/>
-            <Button x:Name="ActionButton" Content="Add passClaude" Style="{StaticResource Sticker}" Margin="12,0,0,0" IsDefault="True"/>
+            <Button x:Name="ActionButton" Content="Add NoPeeking" Style="{StaticResource Sticker}" Margin="12,0,0,0" IsDefault="True"/>
           </StackPanel>
         </Grid>
       </StackPanel>
@@ -265,7 +265,7 @@ function New-InstallerWindow {
     'ProblemCommand', 'HelpLink', 'CloseButton', 'ActionButton', 'CloseX', 'Header') {
     $ui[$n] = $window.FindName($n)
   }
-  foreach ($row in @(@('node', 'Node.js', ' 20 or newer'), @('claude', 'Claude Code', ''), @('add', 'Add passClaude', ' to Claude Code'))) {
+  foreach ($row in @(@('node', 'Node.js', ' 20 or newer'), @('claude', 'Claude Code', ''), @('add', 'Add NoPeeking', ' to Claude Code'))) {
     $grid = [Windows.Markup.XamlReader]::Parse($RowXaml)
     $ui['Rows'].Children.Add($grid) | Out-Null
     $parts = @{ Dot = $grid.FindName('Dot'); Icon = $grid.FindName('Icon'); Status = $grid.FindName('Status') }
@@ -294,7 +294,7 @@ function Show-Screen($Ui, [string]$Screen) {
   $Ui.ActionButton.Visibility = 'Visible'
   $Ui.ActionButton.IsEnabled = $true
   $Ui.CloseButton.Content = 'Close'
-  $Ui.Heading.Text = 'Install passClaude'
+  $Ui.Heading.Text = 'Install NoPeeking'
   Set-Mouth $Ui 'calm'
   switch ($Screen) {
     'checking' {
@@ -304,11 +304,11 @@ function Show-Screen($Ui, [string]$Screen) {
     }
     'ready' {
       Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'waiting' 'Ready'
-      $Ui.ActionButton.Content = 'Add passClaude'
+      $Ui.ActionButton.Content = 'Add NoPeeking'
     }
     'missing-node' {
       Set-Row $Ui 'node' 'missing' 'Not found'; Set-Row $Ui 'claude' 'waiting' ''; Set-Row $Ui 'add' 'waiting' ''
-      Show-Problem $Ui 'passClaude needs Node.js 20 or newer.' 'Install the LTS version from nodejs.org, then open this file again.'
+      Show-Problem $Ui 'NoPeeking needs Node.js 20 or newer.' 'Install the LTS version from nodejs.org, then open this file again.'
       $Ui.ActionButton.Content = 'Get Node.js'
     }
     'missing-claude' {
@@ -324,7 +324,7 @@ function Show-Screen($Ui, [string]$Screen) {
     'done' {
       Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'ok' 'Done'
       $Ui.Heading.Text = "You're all set."
-      $Ui.DoneTitle.Text = 'passClaude is installed.'
+      $Ui.DoneTitle.Text = 'NoPeeking is installed.'
       $Ui.DoneText.Text = 'Restart Claude Code, then try saying:'
       $Ui.DonePanel.Visibility = 'Visible'
       $Ui.ActionButton.Visibility = 'Collapsed'
@@ -333,7 +333,7 @@ function Show-Screen($Ui, [string]$Screen) {
     'already' {
       Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'ok' 'Already added'
       $Ui.Heading.Text = "You're all set."
-      $Ui.DoneTitle.Text = 'passClaude is already installed.'
+      $Ui.DoneTitle.Text = 'NoPeeking is already installed.'
       $Ui.DoneText.Text = "If Claude Code doesn't show it, restart Claude Code. Then try saying:"
       $Ui.DonePanel.Visibility = 'Visible'
       $Ui.ActionButton.Visibility = 'Collapsed'
@@ -370,14 +370,14 @@ function Save-WindowPng($Window, [string]$Path) {
   try { $encoder.Save($stream) } finally { $stream.Dispose() }
 }
 
-# Test mode (install-passclaude.cmd --render-screens <folder>, used by passClaude's own tests): draw every screen into
+# Test mode (install-nopeeking.cmd --render-screens <folder>, used by NoPeeking's own tests): draw every screen into
 # the folder and change nothing.
-if ($env:PASSCLAUDE_INSTALLER_TEST) {
+if ($env:NOPEEKING_INSTALLER_TEST) {
   $screens = 'checking', 'ready', 'missing-node', 'missing-claude', 'working', 'done', 'already', 'failed'
   foreach ($screen in $screens) {
     $ui = New-InstallerWindow
     Show-Screen $ui $screen
-    Save-WindowPng $ui.Window (Join-Path $env:PASSCLAUDE_INSTALLER_TEST "installer-$screen.png")
+    Save-WindowPng $ui.Window (Join-Path $env:NOPEEKING_INSTALLER_TEST "installer-$screen.png")
   }
   $versions = [ordered]@{}
   foreach ($v in 'v18.19.0', 'v19.9.0', 'v20.0.0', 'v22.11.0', 'v100.1.0', '', 'garbage') { $versions[$v] = Test-NodeVersion $v }
@@ -429,7 +429,7 @@ try {
     if (-not (Test-ClaudeInstalled)) { $state.Screen = 'missing-claude'; Show-Screen $ui 'missing-claude'; return }
     Set-Row $ui 'node' 'ok' 'Found'
     Set-Row $ui 'claude' 'ok' 'Found'
-    $state.Process = Start-Hidden 'claude mcp get passclaude'
+    $state.Process = Start-Hidden 'claude mcp get nopeeking'
     Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'already' } else { $state.Screen = 'ready' }; Show-Screen $ui $state.Screen }
   }
 
@@ -458,11 +458,11 @@ try {
 
   # The window is ready: hide the empty console behind it. If this fails the console simply stays.
   try {
-    Add-Type -Namespace PassClaude -Name Console -MemberDefinition @'
+    Add-Type -Namespace NoPeeking -Name Console -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern System.IntPtr GetConsoleWindow();
 [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hwnd, int cmd);
 '@
-    $null = [PassClaude.Console]::ShowWindow([PassClaude.Console]::GetConsoleWindow(), 0)
+    $null = [NoPeeking.Console]::ShowWindow([NoPeeking.Console]::GetConsoleWindow(), 0)
   } catch {}
   $null = $ui.Window.ShowDialog()
 } catch {

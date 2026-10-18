@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { pngSize } from '../scripts/brand/ico.js';
 
 const skip = process.platform !== 'win32';
-const INSTALLER = fileURLToPath(new URL('../install/install-passclaude.cmd', import.meta.url));
+const INSTALLER = fileURLToPath(new URL('../install/install-nopeeking.cmd', import.meta.url));
 
 /** Runs the real .cmd through cmd.exe in test mode: it draws its screens into dir and changes nothing. */
 function renderInstaller(dir) {
@@ -28,7 +28,7 @@ test('the one-click installer opens its window from the .cmd and draws every scr
       const { width, height } = pngSize(readFileSync(join(dir, `installer-${screen}.png`)));
       assert.ok(width >= 900 && height >= 600, `${screen}: ${width}×${height}`);
     }
-    assert.equal(report.command, 'claude mcp add --scope user passclaude -- npx -y passclaude');
+    assert.equal(report.command, 'claude mcp add --scope user nopeeking -- npx -y nopeeking');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -54,7 +54,7 @@ test('the installer accepts Node.js 20 and newer only', { skip }, () => {
 test('a powershell.exe planted next to the installer (say in Downloads) is never run', { skip }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'pc-installer-plant-'));
   try {
-    const copy = join(dir, 'install-passclaude.cmd');
+    const copy = join(dir, 'install-nopeeking.cmd');
     copyFileSync(INSTALLER, copy);
     // Any program will do as the plant: whoami prints a user name, which is not the JSON the real script prints.
     copyFileSync(join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'whoami.exe'), join(dir, 'powershell.exe'));
@@ -82,9 +82,9 @@ test('the installer starts cmd.exe by full path, from the user profile, and stop
 
 test('test mode comes only from an argument, which a double-click never passes, not from an inherited variable', () => {
   const batch = readFileSync(INSTALLER, 'utf8').split('#>')[0];
-  const clear = batch.indexOf('set "PASSCLAUDE_INSTALLER_TEST="');
-  const fromArg = batch.indexOf('if "%~1"=="--render-screens" set "PASSCLAUDE_INSTALLER_TEST=%~2"');
-  assert.ok(clear > 0, 'the batch part clears any PASSCLAUDE_INSTALLER_TEST it inherits');
+  const clear = batch.indexOf('set "NOPEEKING_INSTALLER_TEST="');
+  const fromArg = batch.indexOf('if "%~1"=="--render-screens" set "NOPEEKING_INSTALLER_TEST=%~2"');
+  assert.ok(clear > 0, 'the batch part clears any NOPEEKING_INSTALLER_TEST it inherits');
   assert.ok(fromArg > clear, 'and only then sets it from --render-screens <folder>');
 });
 
@@ -102,5 +102,5 @@ test('the installer stays readable: an ASCII text file whose batch part runs no 
   assert.equal(text.match(/[^\x00-\x7F]/), null, 'ASCII only');
   assert.match(text, /^<# : /, 'starts with the batch/PowerShell header');
   assert.doesNotMatch(text, /\biex\b|Invoke-Expression/i);
-  assert.match(text, /claude mcp add --scope user passclaude -- npx -y passclaude/);
+  assert.match(text, /claude mcp add --scope user nopeeking -- npx -y nopeeking/);
 });

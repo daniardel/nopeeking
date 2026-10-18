@@ -1,4 +1,4 @@
-<!-- Styles shared by passClaude's windows. Colours come from brand.xaml and fonts from ui.ps1, so every value here is a
+<!-- Styles shared by NoPeeking's windows. Colours come from brand.xaml and fonts from ui.ps1, so every value here is a
      DynamicResource: this file is parsed on its own, before those resources are merged next to it. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 

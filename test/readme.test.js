@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 const readme = readFileSync(root('README.md'), 'utf8');
 const urls = [...readme.matchAll(/\]\(([^)\s]+)\)|(?:href|srcset|src)="([^"]*)"/g)].map((m) => m[1] ?? m[2]);
-const REPO_FILE = /^https:\/\/(?:raw\.githubusercontent\.com\/daniardel\/passclaude\/main|github\.com\/daniardel\/passclaude\/blob\/main)\/(.+)$/;
+const REPO_FILE = /^https:\/\/(?:raw\.githubusercontent\.com\/daniardel\/nopeeking\/main|github\.com\/daniardel\/nopeeking\/blob\/main)\/(.+)$/;
 
 test('every README link and image is a full address, so they also work on npm, away from the repo', () => {
   assert.ok(urls.length > 10);

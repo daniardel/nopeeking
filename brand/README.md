@@ -1,7 +1,7 @@
-# passClaude brand kit
+# NoPeeking brand kit
 
-The look of passClaude: a violet-and-yellow "sticker" style and a padlock that keeps its eyes shut, because Claude
-never sees your passwords. passClaude is an independent project; nothing here is Anthropic's.
+The look of NoPeeking: a violet-and-yellow "sticker" style and a padlock that keeps its eyes shut, because Claude
+never sees your passwords. NoPeeking is an independent project; nothing here is Anthropic's.
 
 ## What's here
 
@@ -12,9 +12,9 @@ never sees your passwords. passClaude is an independent project; nothing here is
 | `web/fonts/` | Self-hosted `.woff2` fonts for the phone page and landing page, with their licences. |
 | `logo/mark.svg` | The padlock. `mark-yellow.svg` for violet grounds, `mark-mono.svg` in one colour (`currentColor`). |
 | `logo/face-*.svg` | The padlock's moods: `saved` (smiling), `error` (worried), `expired` (asleep). |
-| `logo/lockup*.svg` | Generated: padlock + "passClaude" wordmark, as outlines. |
+| `logo/lockup*.svg` | Generated: padlock + "NoPeeking" wordmark, as outlines. |
 | `social-preview.png` | Generated: upload it in the repo's Settings → Social preview. |
-| `../assets/` | What the installed app uses: `passclaude.ico` and `.ttf` fonts. This is the only part in the npm package. |
+| `../assets/` | What the installed app uses: `nopeeking.ico` and `.ttf` fonts. This is the only part in the npm package. |
 
 ## Colours
 

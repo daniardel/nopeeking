@@ -164,7 +164,7 @@ test('outlines.json has every text the generated images need', () => {
     assert.equal(o[key].box.length, 4, key);
     assert.equal(o[key].unitsPerEm, 1000, key);
   }
-  assert.equal(o.wordmark.text, 'passClaude');
+  assert.equal(o.wordmark.text, 'NoPeeking');
 });
 
 /** The first 24 bytes of a PNG: signature, IHDR length and type, width, height. Enough for pngSize. */
@@ -210,8 +210,8 @@ test('encodeIco refuses sizes Windows icons cannot hold', () => {
   }
 });
 
-test('assets/passclaude.ico holds every size: bitmaps under 256 px, as older Windows code needs, and a 256 px PNG', () => {
-  const entries = decodeIco(readFileSync(root('assets/passclaude.ico')));
+test('assets/nopeeking.ico holds every size: bitmaps under 256 px, as older Windows code needs, and a 256 px PNG', () => {
+  const entries = decodeIco(readFileSync(root('assets/nopeeking.ico')));
   assert.deepEqual(entries.map((e) => e.size), ICON_SIZES);
   for (const { size, format, data } of entries) {
     if (size === 256) {
@@ -244,7 +244,7 @@ test('brand/social-preview.png is 1280×640', () => {
 test('the npm package ships assets/ and leaves the brand sources out', () => {
   const out = execSync('npm pack --dry-run --json --ignore-scripts', { cwd: root('.'), encoding: 'utf8' });
   const paths = JSON.parse(out)[0].files.map((f) => f.path.replace(/\\/g, '/'));
-  assert.ok(paths.includes('assets/passclaude.ico'), 'icon');
+  assert.ok(paths.includes('assets/nopeeking.ico'), 'icon');
   for (const f of fontRoles) {
     assert.ok(paths.includes(`assets/fonts/OFL-${f.family.replace(/ /g, '')}.txt`), `${f.family} licence`);
     for (const file of Object.values(f.files)) assert.ok(paths.includes(`assets/fonts/${file}.ttf`), file);
@@ -280,9 +280,9 @@ function assertLooksSame(a, b, what) {
 }
 const rawPixels = async (png) => (await sharp(png).ensureAlpha().raw().toBuffer());
 
-test('assets/passclaude.ico is up to date with the mark', async () => {
+test('assets/nopeeking.ico is up to date with the mark', async () => {
   const fresh = decodeIco(await iconIco());
-  const shipped = decodeIco(readFileSync(root('assets/passclaude.ico')));
+  const shipped = decodeIco(readFileSync(root('assets/nopeeking.ico')));
   assert.deepEqual(shipped.map((e) => [e.size, e.format]), fresh.map((e) => [e.size, e.format]));
   for (const [i, { size, format, data }] of shipped.entries()) {
     if (format === 'bmp') assertLooksSame(data, fresh[i].data, `${size} px`);

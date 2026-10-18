@@ -7,7 +7,7 @@ export function fakeWindowsCred({ popupValue = null } = {}) {
   const result = (code, stdout = '') => ({ code, stdout, stderr: '' });
   async function run(script, args = [], stdin = '') {
     if (script === 'prompt.ps1') {
-      const target = `passclaude:${args[0]}`;
+      const target = `nopeeking:${args[0]}`;
       if (creds.has(target)) return result(4);
       if (popupValue === null) return result(6);
       creds.set(target, { comment: JSON.parse(stdin).comment, value: popupValue });
@@ -15,7 +15,7 @@ export function fakeWindowsCred({ popupValue = null } = {}) {
     }
     if (script !== 'cred.ps1') throw new Error(`unexpected script ${script}`);
     const [op, name] = args;
-    const target = `passclaude:${name}`;
+    const target = `nopeeking:${name}`;
     switch (op) {
       case 'list': return result(0, [...creds].map(([t, c]) => `${t}\t${c.comment}\n`).join(''));
       case 'meta': return creds.has(target) ? result(0, creds.get(target).comment) : result(3);

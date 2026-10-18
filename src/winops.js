@@ -42,7 +42,7 @@ export function createWinOps({ run = runPs, notify = true } = {}) {
       run('qr.ps1', [], stdin, { timeoutMs, signal }).catch(() => {});
     },
 
-    /** Shows "passClaude typed your … password" in the corner for a few seconds. Never waits for it, never throws. */
+    /** Shows "NoPeeking typed your … password" in the corner for a few seconds. Never waits for it, never throws. */
     notifyTyped({ name, site }) {
       if (!notify) return;
       lastToast?.abort();

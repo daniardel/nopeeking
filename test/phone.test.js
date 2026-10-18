@@ -4,7 +4,7 @@ import { CLOSE_ACK_WAIT_MS, CLOSE_DRAIN_MS, RELAY_OPEN_WAIT_MS, createPhone } fr
 import { aadFor, deriveKey, fromB64u, generateKeyPair, seal, toB64u, unseal } from '../docs/e2e.js';
 import { fakeNtfy, memoryVault } from './helpers.js';
 
-const PAGE = 'https://me.github.io/passclaude/';
+const PAGE = 'https://me.github.io/nopeeking/';
 
 function params(link) {
   return new URLSearchParams(new URL(link).hash.slice(1));
@@ -349,7 +349,7 @@ test('start refuses once the phone is shutting down, and opens no subscription',
   const ntfy = fakeNtfy();
   const phone = createPhone({ vault: memoryVault(), ntfy, pageUrl: PAGE });
   await phone.close();
-  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), /passClaude is shutting down\./);
+  await assert.rejects(phone.start({ name: 'gh', kind: 'command' }), /NoPeeking is shutting down\./);
   assert.equal(ntfy.subscribes, 0);
 });
 
@@ -361,7 +361,7 @@ test('a start still in progress when close() is called registers nothing', async
   const phone = createPhone({ vault, ntfy, pageUrl: PAGE });
   const starting = phone.start({ name: 'gh', kind: 'command' });
   // Attach the rejection handler before close() waits, so the rejection is never unhandled.
-  const refused = assert.rejects(starting, /passClaude is shutting down\./);
+  const refused = assert.rejects(starting, /NoPeeking is shutting down\./);
   await phone.close();
   await refused;
   assert.equal(ntfy.subscribes, 0);

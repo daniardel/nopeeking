@@ -5,7 +5,7 @@ function New-ToastWindow([string]$Name, [string]$Site) {
   $padlock = Get-PcPadlockXaml -MouthName 'Mouth'
   $window = New-PcWindow @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="passClaude" SizeToContent="WidthAndHeight" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Title="NoPeeking" SizeToContent="WidthAndHeight" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False" Focusable="False"
         FontFamily="{DynamicResource FontBody}" Foreground="{DynamicResource Ink}" UseLayoutRounding="True">
   <Grid Margin="12,12,20,20" Width="368">
@@ -14,7 +14,7 @@ function New-ToastWindow([string]$Name, [string]$Site) {
             Padding="16,12,10,16" AutomationProperties.LiveSetting="Polite">
       <StackPanel>
         <Grid>
-          <TextBlock Text="passClaude &#183; now" FontFamily="{DynamicResource FontMono}" FontWeight="Medium" FontSize="11"
+          <TextBlock Text="NoPeeking &#183; now" FontFamily="{DynamicResource FontMono}" FontWeight="Medium" FontSize="11"
                      Foreground="{DynamicResource Muted}" VerticalAlignment="Center"/>
           <Button x:Name="Dismiss" Style="{DynamicResource TitleCloseButton}" Width="30" Height="26" HorizontalAlignment="Right"
                   AutomationProperties.Name="Dismiss"/>
@@ -49,7 +49,7 @@ function New-ToastWindow([string]$Name, [string]$Site) {
 # Returns once it has closed.
 function Show-PcToast($Window, [double]$Seconds = 5) {
   $Window.Add_SourceInitialized({
-      [PassClaude.Show]::WindowNoActivate((New-Object Windows.Interop.WindowInteropHelper $Window).Handle)
+      [NoPeeking.Show]::WindowNoActivate((New-Object Windows.Interop.WindowInteropHelper $Window).Handle)
     }.GetNewClosure())
   $Window.Add_ContentRendered({
       $area = [Windows.SystemParameters]::WorkArea

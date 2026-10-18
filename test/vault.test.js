@@ -64,8 +64,8 @@ test('names are checked before anything reaches PowerShell', async () => {
   assert.equal(ran, false);
 });
 
-test('list ignores entries that are not passClaude metadata', async () => {
-  const stdout = 'passclaude:ok\t{"v":1,"kind":"command","created":"x"}\npassclaude:junk\tnot json\n';
+test('list ignores entries that are not NoPeeking metadata', async () => {
+  const stdout = 'nopeeking:ok\t{"v":1,"kind":"command","created":"x"}\nnopeeking:junk\tnot json\n';
   const vault = createVault({ run: async () => ({ code: 0, stdout, stderr: '' }) });
   assert.deepEqual(await vault.list(), [{ name: 'ok', kind: 'command', site: undefined, created: 'x' }]);
 });

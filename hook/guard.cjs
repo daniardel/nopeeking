@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// passClaude guard: a Claude Code PreToolUse hook for the Bash and PowerShell tools.
-// Blocks shell commands that try to read saved secrets directly instead of using the passClaude tools.
+// NoPeeking guard: a Claude Code PreToolUse hook for the Bash and PowerShell tools.
+// Blocks shell commands that try to read saved secrets directly instead of using the NoPeeking tools.
 // A speed bump, not a wall: a determined attacker can find other ways. See the README security section.
 'use strict';
 
 const BLOCKED = [
-  /passclaude:/i, // Credential Manager target names
-  /cred\.ps1/i, // passClaude's own vault script
+  /nopeeking:/i, // Credential Manager target names
+  /cred\.ps1/i, // NoPeeking's own vault script
   /\bCred(Read|Enumerate)/i, // the Windows credential APIs
   /advapi32/i, // the DLL that holds them
   /\bcmdkey\b/i,
@@ -20,8 +20,8 @@ const BLOCKED = [
 function verdict(input) {
   const command = String(input?.tool_input?.command ?? '');
   if (!BLOCKED.some((re) => re.test(command))) return null;
-  return 'Blocked by passClaude guard: this command looks like it reads saved secrets directly or hides what it does. '
-    + 'Use the passClaude tools instead (type_secret, run_with_secret). If this is a mistake, the user can run it themselves.';
+  return 'Blocked by NoPeeking guard: this command looks like it reads saved secrets directly or hides what it does. '
+    + 'Use the NoPeeking tools instead (type_secret, run_with_secret). If this is a mistake, the user can run it themselves.';
 }
 
 module.exports = { BLOCKED, verdict };

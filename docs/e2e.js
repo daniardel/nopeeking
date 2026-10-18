@@ -1,4 +1,4 @@
-// End-to-end encryption shared by the phone page (browser) and the passClaude server (Node 20+).
+// End-to-end encryption shared by the phone page (browser) and the NoPeeking server (Node 20+).
 // ECDH P-256 -> HKDF-SHA256 -> AES-256-GCM, using only the standard WebCrypto API.
 
 const subtle = globalThis.crypto.subtle;
@@ -31,7 +31,7 @@ export async function deriveKey(privateKey, peerPublicRaw, topic) {
   const shared = await subtle.deriveBits({ name: 'ECDH', public: peer }, privateKey, 256);
   const hkdf = await subtle.importKey('raw', shared, 'HKDF', false, ['deriveKey']);
   return subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt: enc.encode(topic), info: enc.encode('passclaude v1') },
+    { name: 'HKDF', hash: 'SHA-256', salt: enc.encode(topic), info: enc.encode('nopeeking v1') },
     hkdf,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -41,7 +41,7 @@ export async function deriveKey(privateKey, peerPublicRaw, topic) {
 
 /** Binds a message to one link and one direction, so it can't be replayed elsewhere. */
 export function aadFor({ topic, name, kind, site }, purpose) {
-  return enc.encode(`passclaude v1|${purpose}|${topic}|${name}|${kind}|${site ?? ''}`);
+  return enc.encode(`nopeeking v1|${purpose}|${topic}|${name}|${kind}|${site ?? ''}`);
 }
 
 export async function seal(key, obj, aad) {

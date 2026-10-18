@@ -1,4 +1,4 @@
-// The seven passClaude tools. Each handler takes the tool's arguments and returns the text Claude sees.
+// The seven NoPeeking tools. Each handler takes the tool's arguments and returns the text Claude sees.
 // No handler ever returns a secret value. Refusals are thrown as Errors with a plain-English next step.
 import fs from 'node:fs';
 import guard from '../hook/guard.cjs';

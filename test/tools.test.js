@@ -37,7 +37,7 @@ async function setup({
   const phone = {
     start: async (req) => {
       calls.started.push(req);
-      return { link: 'https://me.github.io/passclaude/#v=1&t=pc-test', expiresAt: Date.now() + 300_000 };
+      return { link: 'https://me.github.io/nopeeking/#v=1&t=pc-test', expiresAt: Date.now() + 300_000 };
     },
     check: async () => phoneStatus,
     forget: (name) => calls.forgotten.push(name),
@@ -85,7 +85,7 @@ test('add_secret reports a closed popup and saves nothing', async () => {
 test('add_secret_from_phone returns the link at once; check_phone_secret reports each state', async () => {
   const { tools, calls } = await setup();
   const out = await tools.add_secret_from_phone({ name: 'hulu', kind: 'web', site: 'www.hulu.com' });
-  assert.match(out, /https:\/\/me\.github\.io\/passclaude\/#v=1&t=pc-test/);
+  assert.match(out, /https:\/\/me\.github\.io\/nopeeking\/#v=1&t=pc-test/);
   assert.match(out, /expires in 5 minutes/);
   assert.match(out, /check_phone_secret/);
   // On Remote Control the user sees Claude's message only when its turn ends, so Claude must not wait inside the turn.
@@ -117,11 +117,11 @@ test('add_secret_from_phone opens a QR window only when asked, and closes it onc
   const out = await tools.add_secret_from_phone({ name: 'hulu', kind: 'web', site: 'hulu.com', show_qr: true });
   assert.equal(calls.qr.length, 1);
   const shown = calls.qr[0];
-  assert.equal(shown.link, 'https://me.github.io/passclaude/#v=1&t=pc-test');
+  assert.equal(shown.link, 'https://me.github.io/nopeeking/#v=1&t=pc-test');
   assert.deepEqual([shown.name, shown.kind], ['hulu', 'web']);
   assert.ok(shown.expiresAt > Date.now());
   assert.match(out, /QR code/);
-  assert.match(out, /https:\/\/me\.github\.io\/passclaude\/#v=1&t=pc-test/, 'the link is still in the reply, to tap instead');
+  assert.match(out, /https:\/\/me\.github\.io\/nopeeking\/#v=1&t=pc-test/, 'the link is still in the reply, to tap instead');
   await new Promise((r) => setImmediate(r));
   assert.equal(shown.signal.aborted, true, 'the phone check came back saved, so the window closes');
 
@@ -199,8 +199,8 @@ test('run_with_secret refuses a command the guard blocks, before reading any sec
   const get = vault.get;
   vault.get = async (name) => { reads.push(name); return get(name); };
   await assert.rejects(
-    tools.run_with_secret({ command: '& "C:/x/node_modules/passclaude/src/ps/cred.ps1" get netflix', env: { T: 'github' } }),
-    /Blocked by passClaude guard/,
+    tools.run_with_secret({ command: '& "C:/x/node_modules/nopeeking/src/ps/cred.ps1" get netflix', env: { T: 'github' } }),
+    /Blocked by NoPeeking guard/,
   );
   assert.equal(calls.runs.length, 0);
   assert.deepEqual(reads, []);

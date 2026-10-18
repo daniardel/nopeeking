@@ -129,11 +129,11 @@ export function createPhone({
 
   return {
     async start({ name, kind, site }) {
-      if (closed) throw new Error('passClaude is shutting down.');
+      if (closed) throw new Error('NoPeeking is shutting down.');
       if (kind !== 'web' && kind !== 'command') throw new Error('Kind must be "web" or "command".');
       if (kind === 'web' && !site) throw new Error('A web link needs a site, such as netflix.com.');
       if (kind === 'command' && site) throw new Error('A command link cannot have a site.');
-      if (!pageUrl) throw new Error('Phone page not configured. Set PASSCLAUDE_PAGE_URL, or use add_secret (PC popup) instead.');
+      if (!pageUrl) throw new Error('Phone page not configured. Set NOPEEKING_PAGE_URL, or use add_secret (PC popup) instead.');
       if (starting.has(name) || pending.get(name)?.status === 'waiting') {
         throw new Error(`A phone link for "${name}" is already waiting. Use check_phone_secret.`);
       }
@@ -142,7 +142,7 @@ export function createPhone({
         if (await vault.meta(name)) throw new Error(`"${name}" already exists. Delete it first if you want to replace it.`);
 
         const keys = await generateKeyPair();
-        if (closed) throw new Error('passClaude is shutting down.'); // close() ran while we were waiting
+        if (closed) throw new Error('NoPeeking is shutting down.'); // close() ran while we were waiting
         const topic = randomTopic();
         const created = now();
         const expiresAt = created + ttlMs;
@@ -166,7 +166,7 @@ export function createPhone({
         if (!opened || closed) {
           finish(req, 'expired'); // stops listening
           pending.delete(name);
-          if (closed) throw new Error('passClaude is shutting down.');
+          if (closed) throw new Error('NoPeeking is shutting down.');
           throw new Error(`Could not reach the relay (${relayHost(ntfy.baseUrl)}) from this PC. Use add_secret (PC popup) instead.`);
         }
 

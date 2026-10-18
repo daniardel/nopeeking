@@ -1,4 +1,4 @@
-# Shared setup for passClaude helper scripts: UTF-8 stdin/stdout and Windows API bindings.
+# Shared setup for NoPeeking helper scripts: UTF-8 stdin/stdout and Windows API bindings.
 # Secrets are read from stdin or Credential Manager and are never written to stderr.
 $ErrorActionPreference = 'Stop'
 $utf8 = New-Object System.Text.UTF8Encoding $false
@@ -7,7 +7,7 @@ $utf8 = New-Object System.Text.UTF8Encoding $false
 
 function Get-Target([string]$Name) {
   if ($Name -cnotmatch '^[a-z0-9][a-z0-9._-]{0,63}$') { [Console]::Out.Write('BAD_NAME'); exit 1 }
-  return "passclaude:$Name"
+  return "nopeeking:$Name"
 }
 
 Add-Type -TypeDefinition @'
@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
-namespace PassClaude {
+namespace NoPeeking {
   public static class Cred {
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct CREDENTIAL {
@@ -87,7 +87,7 @@ namespace PassClaude {
       c.TargetName = target;
       c.Comment = comment;
       c.Persist = PERSIST_LOCAL_MACHINE;
-      c.UserName = "passclaude";
+      c.UserName = "nopeeking";
       c.CredentialBlobSize = blob.Length;
       c.CredentialBlob = Marshal.AllocHGlobal(Math.Max(blob.Length, 1));
       try {

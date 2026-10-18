@@ -1,4 +1,4 @@
-// passClaude MCP server: registers the seven tools and serves them over stdio.
+// NoPeeking MCP server: registers the seven tools and serves them over stdio.
 import fs from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -13,7 +13,7 @@ import { runCommand, stopAll } from './runner.js';
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 const INSTRUCTIONS = [
-  "passClaude lets you use the user's website passwords and API keys without ever seeing them.",
+  "NoPeeking lets you use the user's website passwords and API keys without ever seeing them.",
   'Never ask the user to paste a password, API key or token into the chat. To save one, call add_secret (a popup on the PC),',
   'or add_secret_from_phone when the user is away from the PC (for example on their phone through Remote Control).',
   'To log in to a website: open the login page in Chrome, click the password box, then call type_secret.',
@@ -49,7 +49,7 @@ const TOOLS = {
     annotations: { readOnlyHint: true },
   },
   type_secret: {
-    description: "Type a saved website password into Chrome. First open the secret's site in Chrome, make it the visible tab of a Chrome window that isn't minimized or completely covered (ask the user to switch to it if needed), and click its password box. passClaude checks the site and that a password box is focused, then types. It does not press Enter: click the sign-in button yourself. The PC must be unlocked.",
+    description: "Type a saved website password into Chrome. First open the secret's site in Chrome, make it the visible tab of a Chrome window that isn't minimized or completely covered (ask the user to switch to it if needed), and click its password box. NoPeeking checks the site and that a password box is focused, then types. It does not press Enter: click the sign-in button yourself. The PC must be unlocked.",
     inputSchema: { name: secretName },
   },
   run_with_secret: {
@@ -58,7 +58,7 @@ const TOOLS = {
       command: z.string().min(1).describe('PowerShell command to run.'),
       env: z.record(z.string(), z.string()).optional().describe('Environment variable name -> saved secret name, e.g. {"GITHUB_TOKEN": "github"}.'),
       stdin: secretName.optional().describe('A saved command secret to send as the command\'s input, followed by Enter. Only the first program that reads input gets it. Give env, stdin or both.'),
-      cwd: z.string().optional().describe('Folder to run in (absolute path). Defaults to where passClaude was started.'),
+      cwd: z.string().optional().describe('Folder to run in (absolute path). Defaults to where NoPeeking was started.'),
       timeout_sec: z.number().int().min(1).max(MAX_TIMEOUT_SEC).optional().describe('Stop the command after this many seconds (default 120).'),
     },
   },
@@ -71,7 +71,7 @@ const TOOLS = {
 
 export function createServer(deps) {
   const handlers = createHandlers(deps);
-  const server = new McpServer({ name: 'passclaude', version: pkg.version }, { instructions: INSTRUCTIONS });
+  const server = new McpServer({ name: 'nopeeking', version: pkg.version }, { instructions: INSTRUCTIONS });
   for (const [toolName, def] of Object.entries(TOOLS)) {
     server.registerTool(toolName, def, async (...args) => {
       const input = def.inputSchema ? args[0] : {};
@@ -87,9 +87,9 @@ export function createServer(deps) {
 
 export function createDeps(env = process.env) {
   const config = {
-    ntfyUrl: (env.PASSCLAUDE_NTFY_URL || 'https://ntfy.sh').replace(/\/+$/, ''),
-    pageUrl: env.PASSCLAUDE_PAGE_URL || pkg.passclaude?.pageUrl || '',
-    notify: !['off', '0', 'false', 'no'].includes((env.PASSCLAUDE_NOTIFY ?? '').trim().toLowerCase()),
+    ntfyUrl: (env.NOPEEKING_NTFY_URL || 'https://ntfy.sh').replace(/\/+$/, ''),
+    pageUrl: env.NOPEEKING_PAGE_URL || pkg.nopeeking?.pageUrl || '',
+    notify: !['off', '0', 'false', 'no'].includes((env.NOPEEKING_NOTIFY ?? '').trim().toLowerCase()),
   };
   const vault = createVault();
   const ntfy = createNtfy({ baseUrl: config.ntfyUrl });

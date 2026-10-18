@@ -8,12 +8,12 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 const skip = process.platform !== 'win32';
 const CLI = fileURLToPath(new URL('../src/cli.js', import.meta.url));
 
-test('passclaude help prints the install command', { skip }, () => {
+test('nopeeking help prints the install command', { skip }, () => {
   const out = execFileSync(process.execPath, [CLI, 'help'], { encoding: 'utf8' });
-  assert.match(out, /claude mcp add --scope user passclaude -- npx -y passclaude/);
+  assert.match(out, /claude mcp add --scope user nopeeking -- npx -y nopeeking/);
 });
 
-test('passclaude with no arguments speaks MCP over stdio and nothing else', { skip }, async () => {
+test('nopeeking with no arguments speaks MCP over stdio and nothing else', { skip }, async () => {
   const client = new Client({ name: 'smoke', version: '1.0.0' });
   // The client does not throw on a line of stdout that is not MCP: it reports it here and carries on.
   const errors = [];

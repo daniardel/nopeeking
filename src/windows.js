@@ -1,4 +1,4 @@
-// Runs passClaude's bundled PowerShell scripts. Secrets only ever travel over stdin/stdout, never in arguments.
+// Runs NoPeeking's bundled PowerShell scripts. Secrets only ever travel over stdin/stdout, never in arguments.
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

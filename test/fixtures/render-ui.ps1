@@ -1,4 +1,4 @@
-# Test helper: builds passClaude's WPF windows without showing them, draws each state to a PNG in -Out, and prints
+# Test helper: builds NoPeeking's WPF windows without showing them, draws each state to a PNG in -Out, and prints
 # one JSON line describing what it found. Nothing here touches Credential Manager.
 param([Parameter(Mandatory = $true)][string]$Out)
 $ErrorActionPreference = 'Stop'

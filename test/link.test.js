@@ -52,7 +52,7 @@ test('marks an expired link as expired, so the page can show its asleep screen',
 });
 
 test('reads links made by the PC side', async () => {
-  const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: 'https://me.github.io/passclaude/' });
+  const phone = createPhone({ vault: memoryVault(), ntfy: fakeNtfy(), pageUrl: 'https://me.github.io/nopeeking/' });
   const { link } = await phone.start({ name: 'netflix', kind: 'web', site: 'netflix.com' });
   const parsed = parseLink(new URL(link).hash);
   assert.equal(parsed.error, undefined);

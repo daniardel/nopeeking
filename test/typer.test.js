@@ -93,7 +93,7 @@ test('the site lock refusal never echoes address-bar text, only web hosts or "a 
   ]);
   const r = await typeSecret({ name: 'netflix', vault, win });
   assert.equal(r.ok, false);
-  assert.equal(r.reason, 'Site lock: "netflix" is locked to netflix.com, but Chrome is showing a non-web page, netflix.com.evil.ru, localhost. Nothing was typed. passClaude reads the tab each Chrome window is showing: make the login page the visible tab, then try again.');
+  assert.equal(r.reason, 'Site lock: "netflix" is locked to netflix.com, but Chrome is showing a non-web page, netflix.com.evil.ru, localhost. Nothing was typed. NoPeeking reads the tab each Chrome window is showing: make the login page the visible tab, then try again.');
   for (const leaked of ['my pin 1234', 'pin 1234', 'hunter2', 'file:', 'secret.txt', 'user:pw', 'chrome://', 'settings/passwords']) {
     assert.ok(!r.reason.includes(leaked), `reason leaks "${leaked}": ${r.reason}`);
   }

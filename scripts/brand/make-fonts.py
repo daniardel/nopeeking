@@ -1,4 +1,4 @@
-"""One-off: cut the static font weights passClaude uses, and outline the text the brand images need.
+"""One-off: cut the static font weights NoPeeking uses, and outline the text the brand images need.
 
 Python is not a project dependency. Run from the repo root in a throwaway virtualenv:
 
@@ -39,7 +39,7 @@ CUTS = [
 ]
 # key in outlines.json: (static font, text, letter-spacing in em). Kerning is not applied.
 OUTLINES = {
-    "wordmark": ("BricolageGrotesque-ExtraBold", "passClaude", -0.035),
+    "wordmark": ("BricolageGrotesque-ExtraBold", "NoPeeking", -0.035),
     "tagline1": ("BricolageGrotesque-ExtraBold", "Claude logs you in.", -0.045),
     "tagline2": ("BricolageGrotesque-ExtraBold", "Its eyes stay shut.", -0.045),
     "footnote": ("DMSans-Medium", "Add-on for Claude Code on Windows", 0),

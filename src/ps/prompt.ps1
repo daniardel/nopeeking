@@ -4,7 +4,7 @@ param([Parameter(Mandatory = $true)][string]$Name)
 . "$PSScriptRoot\common.ps1"
 $target = Get-Target $Name
 $req = [Console]::In.ReadToEnd() | ConvertFrom-Json
-if ([PassClaude.Cred]::Exists($target)) { exit 4 }
+if ([NoPeeking.Cred]::Exists($target)) { exit 4 }
 
 . "$PSScriptRoot\ui.ps1"
 . "$PSScriptRoot\prompt-ui.ps1"
@@ -19,7 +19,7 @@ $saved = Show-PcDialog $ui.Window
 $timer.Stop()
 
 if (-not $saved) { $ui.Clear(); exit 6 }
-if ([PassClaude.Cred]::Exists($target)) { $ui.Clear(); exit 4 }  # saved elsewhere while the window was open: never overwrite
-[PassClaude.Cred]::Write($target, $ui.Value(), [string]$req.comment)
+if ([NoPeeking.Cred]::Exists($target)) { $ui.Clear(); exit 4 }  # saved elsewhere while the window was open: never overwrite
+[NoPeeking.Cred]::Write($target, $ui.Value(), [string]$req.comment)
 $ui.Clear()
 exit 0

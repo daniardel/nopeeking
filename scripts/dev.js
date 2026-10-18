@@ -1,4 +1,4 @@
-// Dev only: call passClaude tools from the terminal the way Claude would. Never prints secret values.
+// Dev only: call NoPeeking tools from the terminal the way Claude would. Never prints secret values.
 //   node scripts/dev.js <tool> '<json args>'   e.g. node scripts/dev.js add_secret '{"name":"demo","kind":"command"}'
 //   node scripts/dev.js phone '<json args>'    add_secret_from_phone, then keep waiting until saved or expired
 //   node scripts/dev.js put-dummy <name> <web|command> [site]

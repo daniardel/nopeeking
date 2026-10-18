@@ -26,13 +26,13 @@ const STOP_ALL_KILL_MS = 1200;
 //   leaves a native stderr record (id NativeCommandError, or NativeCommandErrorMessage for later lines) as the latest error and
 //   $LASTEXITCODE 0 or unset, which counts as success. A non-zero $LASTEXITCODE always wins.
 const POSTAMBLE = [
-  '$passclaudeOk = $?',
+  '$nopeekingOk = $?',
   'Set-StrictMode -Off',
-  '$passclaudeCode = $LASTEXITCODE',
-  "$passclaudeId = if ($Error.Count -gt 0) { $Error[0].FullyQualifiedErrorId } else { '' }",
-  'if (-not $passclaudeOk) {',
-  '  if ($passclaudeCode) { exit $passclaudeCode }',
-  "  elseif ($passclaudeId -ne 'NativeCommandError' -and $passclaudeId -ne 'NativeCommandErrorMessage') { exit 1 }",
+  '$nopeekingCode = $LASTEXITCODE',
+  "$nopeekingId = if ($Error.Count -gt 0) { $Error[0].FullyQualifiedErrorId } else { '' }",
+  'if (-not $nopeekingOk) {',
+  '  if ($nopeekingCode) { exit $nopeekingCode }',
+  "  elseif ($nopeekingId -ne 'NativeCommandError' -and $nopeekingId -ne 'NativeCommandErrorMessage') { exit 1 }",
   '}',
 ].join('\n');
 
@@ -74,7 +74,7 @@ export function runCommand({ command, env = {}, cwd, timeoutSec = 120, stdin }) 
   return new Promise((resolve, reject) => {
     // A script file, not -EncodedCommand: for encoded commands PowerShell writes stderr as XML (CLIXML), which escapes the text
     // and mixes it with plain lines. The BOM tells Windows PowerShell 5.1 that the file is UTF-8.
-    const scriptPath = path.join(os.tmpdir(), `passclaude-${crypto.randomUUID()}.ps1`);
+    const scriptPath = path.join(os.tmpdir(), `nopeeking-${crypto.randomUUID()}.ps1`);
     try {
       fs.writeFileSync(scriptPath, `\uFEFF${script}`, 'utf8');
     } catch {

@@ -1,4 +1,4 @@
-# Shared WPF setup for passClaude's windows: brand colours (brand.xaml), the brand fonts from assets\fonts, shared
+# Shared WPF setup for NoPeeking's windows: brand colours (brand.xaml), the brand fonts from assets\fonts, shared
 # styles (ui-styles.xaml), the padlock and the window icon. Dot-source it.
 # Never put text from a request into XAML: load the markup, then set text on named elements, so nothing is parsed.
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Xaml
@@ -7,7 +7,7 @@ $script:PcAssets = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\assets
 
 # The server starts these scripts with a hidden console, and Windows then applies that "hide" to the first window the
 # process shows. An explicit ShowWindow call once the window exists makes it visible.
-Add-Type -Namespace PassClaude -Name Show -MemberDefinition @'
+Add-Type -Namespace NoPeeking -Name Show -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ShowWindow(System.IntPtr hwnd, int cmd);
 public static void Window(System.IntPtr hwnd) { ShowWindow(hwnd, 5); }
 public static void WindowNoActivate(System.IntPtr hwnd) { ShowWindow(hwnd, 4); }
@@ -61,11 +61,11 @@ function Set-PcFace($Mouth, [string]$Mood) {
   $Mouth.Data = [Windows.Media.Geometry]::Parse($script:PcMouth[$Mood])
 }
 
-# Parses a window's markup and gives it the brand resources and the passClaude icon.
+# Parses a window's markup and gives it the brand resources and the NoPeeking icon.
 function New-PcWindow([string]$Xaml) {
   $window = Read-PcXaml $Xaml
   $window.Resources = New-PcResources
-  $icon = Join-Path $script:PcAssets 'passclaude.ico'
+  $icon = Join-Path $script:PcAssets 'nopeeking.ico'
   if (Test-Path -LiteralPath $icon) {
     $window.Icon = [Windows.Media.Imaging.BitmapFrame]::Create((New-Object Uri $icon))
   }
@@ -75,7 +75,7 @@ function New-PcWindow([string]$Xaml) {
 # Shows a window as a dialog in front of everything and returns $true when it closed with DialogResult = $true.
 function Show-PcDialog($Window) {
   $Window.Add_SourceInitialized({
-      [PassClaude.Show]::Window((New-Object Windows.Interop.WindowInteropHelper $Window).Handle)
+      [NoPeeking.Show]::Window((New-Object Windows.Interop.WindowInteropHelper $Window).Handle)
     }.GetNewClosure())
   $Window.Add_ContentRendered({ $Window.Activate() | Out-Null }.GetNewClosure())
   return [bool]$Window.ShowDialog()

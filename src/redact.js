@@ -7,7 +7,9 @@
 // - line joins: the same search with line breaks (and the spaces around them) removed, so a wrapped tail shorter than
 //   PIECE_LENGTH is masked together with the rest of the value, line break included;
 // - ellipsis edges: the first or last EDGE_MIN..EDGE_MAX characters of a form, right before or after '...' or '…'.
-// Shorter pieces elsewhere, other encodings and values a command reshapes on purpose are not caught.
+// Base64 is searched for at each of the three byte alignments, so a value encoded after other text (as in an
+// 'Authorization: Basic' header for 'user:token') is found too. Shorter pieces elsewhere, other encodings and values a
+// command reshapes on purpose are not caught.
 
 export const MIN_SECRET_LENGTH = 4;
 
@@ -20,8 +22,22 @@ const ELLIPSIS_RE = /\.\.\.|…/g;
 const percent = (ch) => '%' + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0');
 const lowerHex = (str) => str.replace(/%[0-9A-F]{2}/g, (m) => m.toLowerCase());
 
+// Base64 of bytes that start at byte offset 0, 1 or 2 of a longer encoded run, cut to the characters that depend on these
+// bytes alone: base64 turns 3 bytes into 4 characters, so the characters that also hold bits of the bytes around them
+// (2 or 3 at the start, 1 at an unfinished end) change with whatever comes before and after.
+function base64Inside(bytes, offset, encoding) {
+  const padded = Buffer.concat([Buffer.alloc(offset), bytes]);
+  const text = padded.toString(encoding).replace(/=+$/, '');
+  return text.slice([0, 2, 3][offset], padded.length % 3 === 0 ? text.length : text.length - 1);
+}
+
+const base64Aligned = (bytes) =>
+  ['base64', 'base64url'].flatMap((encoding) => [0, 1, 2].map((offset) => base64Inside(bytes, offset, encoding)));
+
 export function encodedForms(value) {
   const utf8 = Buffer.from(value, 'utf8');
+  // UTF-16LE: what [Text.Encoding]::Unicode, Out-File in Windows PowerShell 5.1 and -EncodedCommand use.
+  const utf16 = Buffer.from(value, 'utf16le');
   const base64 = utf8.toString('base64');
   const uri = encodeURIComponent(value);
   const json = JSON.stringify(value).slice(1, -1);
@@ -39,7 +55,14 @@ export function encodedForms(value) {
     json,
     // ConvertTo-Json in Windows PowerShell 5.1 also escapes these four.
     json.replace(/[<>&']/g, (ch) => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')),
+    ...base64Aligned(utf8),
+    utf16.toString('base64'),
+    ...base64Aligned(utf16),
+    utf16.toString('hex'),
+    utf16.toString('hex').toUpperCase(),
   ];
+  // UTF-16LE text read back as UTF-8 shows each ASCII character followed by a NUL.
+  if (/^[\x20-\x7e]+$/.test(value)) forms.push(utf16.toString('latin1'));
   return [...new Set(forms)].filter((form) => form.length >= MIN_SECRET_LENGTH);
 }
 

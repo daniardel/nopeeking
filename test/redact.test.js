@@ -41,13 +41,13 @@ test('redact leaves text without secrets alone', () => {
 test('redactOutput drops a secret cut in half at the end of truncated output', () => {
   const secrets = [{ name: 'k', value: 'SUPERSECRET' }];
   const out = redactOutput(`${'x'.repeat(100)}SUPERSEC`, secrets, { truncated: true });
-  assert.equal(out, 'x'.repeat(86)); // drops the longest form length (22 hex chars) from the end
+  assert.equal(out, 'x'.repeat(64)); // drops the longest form length (44 UTF-16 hex chars) from the end
   assert.equal(redactOutput('a SUPERSECRET b', secrets), 'a ••••(k) b');
 });
 
 test('redactOutput drops a secret that straddles the cut', () => {
   const secrets = [{ name: 'k', value: 'SUPERSECRET' }];
-  const out = redactOutput(`${'x'.repeat(80)}SUPERSECRET${'y'.repeat(20)}`, secrets, { truncated: true });
+  const out = redactOutput(`${'x'.repeat(80)}SUPERSECRET${'y'.repeat(40)}`, secrets, { truncated: true });
   // The cut would land inside the mask, so the whole secret is dropped: no fragment survives.
   assert.equal(out, 'x'.repeat(80));
 });
@@ -57,7 +57,7 @@ test('redactOutput never shows a secret prefix when a long mask sits near the cu
     { name: 'A', value: 'prefix_abcd1234' },
     { name: 'production_database_password_for_prod_eu1', value: 'abcd' }, // 41-character name
   ];
-  const out = redactOutput(`${'z'.repeat(50)}prefix_abcd12`, secrets, { truncated: true });
+  const out = redactOutput(`${'z'.repeat(80)}prefix_abcd12`, secrets, { truncated: true });
   assert.ok(!out.includes('prefix_'), out);
   assert.equal(out, 'z'.repeat(33)); // no partial mask either
 });
@@ -171,4 +171,27 @@ test('redact handles 1 MB of ordinary output with three secrets in well under 3 
   const took = Date.now() - started;
   assert.ok(out.includes('••••(long)'));
   assert.ok(took < 3000, `took ${took} ms`);
+});
+
+test('redact hides base64 of a value that starts at any byte inside a longer encoded run', () => {
+  const v = 'hunter2-secret-XYZ';
+  for (const before of ['', 'u:', 'us:', 'user:', 'longer-user:']) {
+    for (const after of ['', '\n', 'ab']) {
+      const bytes = Buffer.from(before + v + after);
+      for (const encoding of ['base64', 'base64url']) {
+        const encoded = bytes.toString(encoding);
+        const out = redact(`Authorization: Basic ${encoded}`, [{ name: 'k', value: v }]);
+        assert.match(out, /^Authorization: Basic .{0,20}••••\(k\).{0,8}$/, `${JSON.stringify(before)} ${JSON.stringify(after)} ${encoding}: ${out}`);
+      }
+    }
+  }
+});
+
+test('redact hides UTF-16LE forms: base64 (as -EncodedCommand uses), hex and text read back as UTF-8', () => {
+  const v = 'hunter2-secret-XYZ';
+  const utf16 = Buffer.from(v, 'utf16le');
+  for (const text of [utf16.toString('base64'), Buffer.from(`x=${v}`, 'utf16le').toString('base64'), utf16.toString('hex'), utf16.toString('latin1')]) {
+    const out = redact(`out: ${text}`, [{ name: 'k', value: v }]);
+    assert.match(out, /^out: .{0,8}••••\(k\).{0,4}$/s, JSON.stringify(text));
+  }
 });

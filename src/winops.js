@@ -22,9 +22,9 @@ export function createWinOps({ run = runPs, notify = true } = {}) {
       return Array.isArray(parsed) ? parsed : [parsed];
     },
 
-    /** 'TYPED', or the refusal code printed by type.ps1. */
-    async typeInto(name, hwnd, url) {
-      const res = await run('type.ps1', [], JSON.stringify({ name, hwnd, url }), { timeoutMs: 30_000 });
+    /** 'TYPED', or the refusal code printed by type.ps1. Typing takes about 15 ms a character, so the longest secret needs ~20 s. */
+    async typeInto(name, hwnd, url, site) {
+      const res = await run('type.ps1', [], JSON.stringify({ name, hwnd, url, site }), { timeoutMs: 60_000 });
       const word = res.stdout.trim();
       if (res.code === EXIT.OK && word === 'TYPED') return 'TYPED';
       return word || `EXIT_${res.code}`;

@@ -197,9 +197,10 @@ namespace NoPeeking {
     private const uint KEYEVENTF_KEYUP = 0x2;
     private const uint KEYEVENTF_UNICODE = 0x4;
 
-    // Types text as unicode key events. Stops (false) if another window takes the foreground.
-    public static bool TypeText(string text, IntPtr hwnd) {
-      foreach (char ch in text) {
+    // Types count characters of text from start as unicode key events. Stops (false) if another window takes the foreground.
+    public static bool TypeText(string text, int start, int count, IntPtr hwnd) {
+      for (int i = start; i < start + count && i < text.Length; i++) {
+        char ch = text[i];
         if (Win.GetForegroundWindow() != hwnd) return false;
         INPUT[] pair = new INPUT[2];
         pair[0].type = INPUT_KEYBOARD;

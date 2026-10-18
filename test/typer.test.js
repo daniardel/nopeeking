@@ -10,7 +10,7 @@ async function setup(windows, typeResult = 'TYPED') {
   const typed = [];
   const win = {
     chromeWindows: async () => windows,
-    typeInto: async (name, hwnd, url) => { typed.push({ name, hwnd, url }); return typeResult; },
+    typeInto: async (name, hwnd, url, site) => { typed.push({ name, hwnd, url, site }); return typeResult; },
   };
   return { vault, win, typed };
 }
@@ -21,7 +21,7 @@ test('types into the foreground Chrome window when it is on the locked site', as
     { hwnd: '2', url: 'www.netflix.com/login', foreground: true },
   ]);
   assert.deepEqual(await typeSecret({ name: 'netflix', vault, win }), { ok: true, site: 'netflix.com' });
-  assert.deepEqual(typed, [{ name: 'netflix', hwnd: '2', url: 'www.netflix.com/login' }]);
+  assert.deepEqual(typed, [{ name: 'netflix', hwnd: '2', url: 'www.netflix.com/login', site: 'netflix.com' }]);
 });
 
 test('uses a background Chrome window when it is the only one on the site', async () => {
@@ -67,6 +67,10 @@ test('explains each refusal from the typing script', async () => {
     ['URL_CHANGED', /page changed/],
     ['INTERRUPTED', /partly filled/],
     ['NOT_FOUND', /disappeared/],
+    ['FOCUS_MOVED', /lost focus.*partly filled/],
+    ['NOT_HTTPS', /isn't https.*Nothing was typed/],
+    ['OTHER_FRAME', /another website.*Nothing was typed/],
+    ['PAGE_UNKNOWN', /Nothing was typed/],
     ['WEIRD', /Typing failed \(WEIRD\)/],
   ];
   for (const [code, pattern] of cases) {

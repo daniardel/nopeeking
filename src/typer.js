@@ -7,6 +7,10 @@ const REASONS = {
   NOT_PASSWORD_FIELD: 'The focused box in Chrome is not a password field. Click the password box first, then try again. Nothing was typed.',
   NOT_FOUND: 'The secret disappeared from the vault. Nothing was typed.',
   INTERRUPTED: 'Another window took focus while typing. The password box may be partly filled: clear it and try again.',
+  FOCUS_MOVED: 'The password box lost focus while typing, so typing stopped. The box may be partly filled: clear it, click it, and try again.',
+  NOT_HTTPS: "This page isn't encrypted (it isn't https), so anyone on the network could read a password typed into it. Nothing was typed. Open the https version of the login page.",
+  OTHER_FRAME: 'The focused password box belongs to a frame from another website, not the locked site. Nothing was typed.',
+  PAGE_UNKNOWN: "Couldn't read the address of the page the password box is in. Nothing was typed. Try again.",
 };
 
 // Address-bar text can hold anything the user typed, so refusals only ever name real-looking web hosts.
@@ -33,7 +37,7 @@ export async function typeSecret({ name, vault, win }) {
     return { ok: false, reason: `Site lock: "${name}" is locked to ${meta.site}, but Chrome is showing ${shown}. Nothing was typed. NoPeeking reads the tab each Chrome window is showing: make the login page the visible tab, then try again.` };
   }
 
-  const result = await win.typeInto(name, target.hwnd, target.url);
+  const result = await win.typeInto(name, target.hwnd, target.url, meta.site);
   if (result === 'TYPED') return { ok: true, site: meta.site };
   return { ok: false, reason: REASONS[result] ?? `Typing failed (${result}). The password box may be partly filled: clear it and try again.` };
 }

@@ -1,6 +1,6 @@
 {
   "name": "nopeeking",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Let Claude Code log into websites and use your API keys without ever seeing them.",
   "type": "module",
   "bin": {

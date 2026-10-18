@@ -1,6 +1,7 @@
 <# : NoPeeking installer. Double-click this file to add NoPeeking to Claude Code for your Windows user.
 @echo off
 rem All it runs is: claude mcp add --scope user nopeeking -- npx -y nopeeking
+rem and, only if the old passClaude server (NoPeeking's name before 0.2.0) is set up too: claude mcp remove passclaude
 rem These first lines are a batch file that starts Windows PowerShell on the rest of this same file, which shows the
 rem installer window. Everything below is plain text: open the file in Notepad to read it.
 rem Full paths, and never look in the current folder for programs: a double-click starts this file in its own folder
@@ -17,6 +18,9 @@ exit /b %errorlevel%
 
 $ErrorActionPreference = 'Stop'
 $Command = 'claude mcp add --scope user nopeeking -- npx -y nopeeking'
+# passClaude is NoPeeking's name before 0.2.0. With both set up, Claude sees two copies of every tool.
+$RemoveOldCommand = 'claude mcp remove passclaude'
+$MigrateCommand = 'npx -y nopeeking migrate'
 $NodeUrl = 'https://nodejs.org'
 $ClaudeUrl = 'https://docs.claude.com/en/docs/claude-code/setup'
 $HelpUrl = 'https://github.com/daniardel/nopeeking#install'
@@ -60,6 +64,11 @@ function Install-InConsole {
   } elseif (-not (Test-ClaudeInstalled)) {
     Write-Host "  Claude Code was not found. Install it first: $ClaudeUrl"
   } else {
+    & cmd.exe /d /c 'claude mcp get passclaude >nul 2>nul'
+    if ($LASTEXITCODE -eq 0) {
+      & cmd.exe /d /c "$RemoveOldCommand >nul 2>nul"
+      Write-Host "  Removed the old passClaude server. To bring over secrets you saved with it, run: $MigrateCommand"
+    }
     & cmd.exe /d /c 'claude mcp get nopeeking >nul 2>nul'
     if ($LASTEXITCODE -eq 0) {
       Write-Host '  NoPeeking is already installed. If Claude Code does not show it, restart Claude Code.'
@@ -205,6 +214,7 @@ $Xaml = @'
 
       <StackPanel Margin="28,22,28,26">
         <StackPanel x:Name="Rows"/>
+        <TextBlock x:Name="Note" FontSize="14" Foreground="#4A4370" Margin="38,2,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
 
         <Border x:Name="DonePanel" Margin="0,18,0,0" Padding="16,14" CornerRadius="14" Background="#F3EFFF" Visibility="Collapsed">
           <StackPanel>
@@ -261,7 +271,7 @@ $Mouths = @{ calm = 'M28.5 48q3.5 2.6 7 0'; worried = 'M27.5 49.5q2.2-2.4 4.5 0t
 function New-InstallerWindow {
   $window = [Windows.Markup.XamlReader]::Parse($Xaml)
   $ui = @{ Window = $window; RowParts = @{} }
-  foreach ($n in 'Rows', 'Mouth', 'Heading', 'DonePanel', 'DoneTitle', 'DoneText', 'TryPill', 'ProblemPanel', 'ProblemTitle', 'ProblemText',
+  foreach ($n in 'Rows', 'Note', 'Mouth', 'Heading', 'DonePanel', 'DoneTitle', 'DoneText', 'TryPill', 'ProblemPanel', 'ProblemTitle', 'ProblemText',
     'ProblemCommand', 'HelpLink', 'CloseButton', 'ActionButton', 'CloseX', 'Header') {
     $ui[$n] = $window.FindName($n)
   }
@@ -289,6 +299,7 @@ function Set-Mouth($Ui, [string]$Mood) { $Ui.Mouth.Data = [Windows.Media.Geometr
 # Each screen sets everything it shows, so any screen can follow any other.
 function Show-Screen($Ui, [string]$Screen) {
   $Ui.DonePanel.Visibility = 'Collapsed'
+  $Ui.Note.Visibility = 'Collapsed'
   $Ui.ProblemPanel.Visibility = 'Collapsed'
   $Ui.ProblemCommand.Visibility = 'Collapsed'
   $Ui.ActionButton.Visibility = 'Visible'
@@ -305,6 +316,10 @@ function Show-Screen($Ui, [string]$Screen) {
     'ready' {
       Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'waiting' 'Ready'
       $Ui.ActionButton.Content = 'Add NoPeeking'
+    }
+    'ready-old' {
+      Show-Screen $Ui 'ready'
+      Show-Note $Ui 'The old passClaude server is set up too. Adding NoPeeking removes it, so Claude only sees one.'
     }
     'missing-node' {
       Set-Row $Ui 'node' 'missing' 'Not found'; Set-Row $Ui 'claude' 'waiting' ''; Set-Row $Ui 'add' 'waiting' ''
@@ -339,6 +354,20 @@ function Show-Screen($Ui, [string]$Screen) {
       $Ui.ActionButton.Visibility = 'Collapsed'
       Set-Mouth $Ui 'happy'
     }
+    'already-old' {
+      Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'ok' 'Already added'
+      Show-Note $Ui 'The old passClaude server is still set up too, so Claude sees two copies of every tool. Remove it?'
+      $Ui.ActionButton.Content = 'Remove passClaude'
+    }
+    'removing' {
+      Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'waiting' 'Removing passClaude...'
+      $Ui.ActionButton.Content = 'Removing...'
+      $Ui.ActionButton.IsEnabled = $false
+    }
+    'done-old' {
+      Show-Screen $Ui 'done'
+      $Ui.DoneText.Text = "Restart Claude Code. To bring over secrets you saved with passClaude, run $MigrateCommand. Then try saying:"
+    }
     'failed' {
       Set-Row $Ui 'node' 'ok' 'Found'; Set-Row $Ui 'claude' 'ok' 'Found'; Set-Row $Ui 'add' 'missing' 'Failed'
       Show-Problem $Ui 'Something went wrong. Nothing was changed.' 'You can try again, or open Claude Code and ask it to run:'
@@ -347,6 +376,11 @@ function Show-Screen($Ui, [string]$Screen) {
       $Ui.ActionButton.Content = 'Try again'
     }
   }
+}
+
+function Show-Note($Ui, [string]$Text) {
+  $Ui.Note.Text = $Text
+  $Ui.Note.Visibility = 'Visible'
 }
 
 function Show-Problem($Ui, [string]$Title, [string]$Text) {
@@ -373,7 +407,8 @@ function Save-WindowPng($Window, [string]$Path) {
 # Test mode (install-nopeeking.cmd --render-screens <folder>, used by NoPeeking's own tests): draw every screen into
 # the folder and change nothing.
 if ($env:NOPEEKING_INSTALLER_TEST) {
-  $screens = 'checking', 'ready', 'missing-node', 'missing-claude', 'working', 'done', 'already', 'failed'
+  $screens = 'checking', 'ready', 'ready-old', 'missing-node', 'missing-claude', 'working', 'removing', 'done', 'done-old',
+    'already', 'already-old', 'failed'
   foreach ($screen in $screens) {
     $ui = New-InstallerWindow
     Show-Screen $ui $screen
@@ -382,13 +417,13 @@ if ($env:NOPEEKING_INSTALLER_TEST) {
   $versions = [ordered]@{}
   foreach ($v in 'v18.19.0', 'v19.9.0', 'v20.0.0', 'v22.11.0', 'v100.1.0', '', 'garbage') { $versions[$v] = Test-NodeVersion $v }
   $timedOut = [ordered]@{ '59s' = (Test-StepTimedOut 0 59000); '61s' = (Test-StepTimedOut 0 61000) }
-  [pscustomobject]@{ screens = $screens; command = $Command; nodeVersions = $versions; stepTimedOut = $timedOut } | ConvertTo-Json -Compress
+  [pscustomobject]@{ screens = $screens; command = $Command; removeOld = $RemoveOldCommand; nodeVersions = $versions; stepTimedOut = $timedOut } | ConvertTo-Json -Compress
   return
 }
 
 try {
   $ui = New-InstallerWindow
-  $state = @{ Screen = 'checking'; Process = $null; Next = $null; Started = 0 }
+  $state = @{ Screen = 'checking'; Process = $null; Next = $null; Started = 0; Installed = $false; Old = $false }
   $timer = New-Object Windows.Threading.DispatcherTimer
   $timer.Interval = [TimeSpan]::FromMilliseconds(150)
   $now = { [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() }
@@ -430,14 +465,50 @@ try {
     Set-Row $ui 'node' 'ok' 'Found'
     Set-Row $ui 'claude' 'ok' 'Found'
     $state.Process = Start-Hidden 'claude mcp get nopeeking'
-    Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'already' } else { $state.Screen = 'ready' }; Show-Screen $ui $state.Screen }
+    Wait-ForProcess {
+      param($code)
+      $state.Installed = $code -eq 0
+      $state.Process = Start-Hidden 'claude mcp get passclaude'
+      Wait-ForProcess {
+        param($code)
+        $state.Old = $code -eq 0
+        $state.Screen = $(if ($state.Installed) { 'already' } else { 'ready' }) + $(if ($state.Old) { '-old' } else { '' })
+        Show-Screen $ui $state.Screen
+      }
+    }
   }
 
+  # Adds NoPeeking, after removing the old passClaude server if it is set up too.
   function Start-Install {
+    if (-not $state.Old) { Start-Add; return }
+    $state.Screen = 'removing'
+    Show-Screen $ui 'removing'
+    $state.Process = Start-Hidden $RemoveOldCommand
+    Wait-ForProcess { param($code) Start-Add }
+  }
+
+  function Start-Add {
     $state.Screen = 'working'
     Show-Screen $ui 'working'
     $state.Process = Start-Hidden $Command
-    Wait-ForProcess { param($code) if ($code -eq 0) { $state.Screen = 'done' } else { $state.Screen = 'failed' }; Show-Screen $ui $state.Screen }
+    Wait-ForProcess {
+      param($code)
+      $state.Screen = $(if ($code -ne 0) { 'failed' } elseif ($state.Old) { 'done-old' } else { 'done' })
+      Show-Screen $ui $state.Screen
+    }
+  }
+
+  # NoPeeking is already there: only the old passClaude server goes.
+  function Start-RemoveOld {
+    $state.Screen = 'removing'
+    Show-Screen $ui 'removing'
+    $state.Process = Start-Hidden $RemoveOldCommand
+    Wait-ForProcess {
+      param($code)
+      $state.Screen = $(if ($code -eq 0) { 'done-old' } else { 'failed' })
+      Show-Screen $ui $state.Screen
+      if ($code -ne 0) { $ui.ProblemCommand.Text = $RemoveOldCommand }
+    }
   }
 
   $ui.ActionButton.Add_Click({
@@ -445,6 +516,7 @@ try {
         switch ($state.Screen) {
           'missing-node' { Start-Process $NodeUrl }
           'missing-claude' { Start-Process $ClaudeUrl }
+          'already-old' { Start-RemoveOld }
           default { Start-Install }
         }
       }

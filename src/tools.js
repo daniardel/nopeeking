@@ -39,15 +39,17 @@ export function createHandlers({ vault, win, phone, runCommand, now = Date.now, 
 
   return {
     async list_secrets() {
-      const secrets = await vault.list();
-      if (secrets.length === 0) return 'No secrets saved yet. Save one with add_secret (PC popup) or add_secret_from_phone.';
+      const [secrets, old] = await Promise.all([vault.list(), vault.oldCount().catch(() => 0)]);
+      const oldNote = old === 0 ? '' : `\n\n${old === 1 ? '1 secret' : `${old} secrets`} saved by passClaude (NoPeeking's old name) `
+        + `${old === 1 ? 'is' : 'are'} not shown yet. To bring them over, run \`npx -y nopeeking migrate\` in a terminal: it moves them without showing their values.`;
+      if (secrets.length === 0) return `No secrets saved yet. Save one with add_secret (PC popup) or add_secret_from_phone.${oldNote}`;
       const lines = secrets.map((s) => {
         const date = String(s.created ?? '').slice(0, 10);
         return s.kind === 'web'
           ? `- ${s.name}: website password for ${s.site} (saved ${date})`
           : `- ${s.name}: command secret (saved ${date})`;
       });
-      return `Saved secrets (values are never shown):\n${lines.join('\n')}`;
+      return `Saved secrets (values are never shown):\n${lines.join('\n')}${oldNote}`;
     },
 
     async add_secret({ name, kind, site }) {

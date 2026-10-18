@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import { createHandlers } from '../src/tools.js';
-import { memoryVault } from './helpers.js';
+import { createVault } from '../src/vault.js';
+import { fakeWindowsCred, memoryVault } from './helpers.js';
 
 const WEB = 'Web-Pa$$word-123';
 const CMD = 'ghp_TOKENVALUE1234';
@@ -285,4 +286,16 @@ test('check_phone_secret waits 50 seconds by default, under the MCP client reque
   const tools = createHandlers({ vault: memoryVault(), win: null, phone, runCommand: null });
   await tools.check_phone_secret({ name: 'hulu' });
   assert.deepEqual(waits, [50_000]);
+});
+
+test('list_secrets points to the migrate command when passClaude secrets are still waiting', async () => {
+  const fake = fakeWindowsCred();
+  const tools = createHandlers({ vault: createVault({ run: fake.run }), win: null, phone: null, runCommand: null });
+  fake.creds.set('passclaude:netflix', { comment: '{"v":1,"kind":"command","created":"x"}', value: 'old-value' });
+  assert.match(await tools.list_secrets(), /No secrets saved yet.*\n\n1 secret saved by passClaude .* is not shown yet\. .*npx -y nopeeking migrate/s);
+  fake.creds.set('passclaude:github', { comment: '{"v":1,"kind":"command","created":"x"}', value: 'old-value' });
+  assert.match(await tools.list_secrets(), /2 secrets saved by passClaude .* are not shown yet/);
+  await createVault({ run: fake.run }).migrate();
+  assert.doesNotMatch(await tools.list_secrets(), /passClaude/);
+  assert.match(await tools.list_secrets(), /- github: command secret/);
 });

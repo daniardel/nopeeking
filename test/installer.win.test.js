@@ -23,12 +23,15 @@ test('the one-click installer opens its window from the .cmd and draws every scr
   const dir = mkdtempSync(join(tmpdir(), 'pc-installer-'));
   try {
     const report = renderInstaller(dir);
-    assert.deepEqual(report.screens, ['checking', 'ready', 'missing-node', 'missing-claude', 'working', 'done', 'already', 'failed']);
+    assert.deepEqual(report.screens, [
+      'checking', 'ready', 'ready-old', 'missing-node', 'missing-claude', 'working', 'removing', 'done', 'done-old', 'already', 'already-old', 'failed',
+    ]);
     for (const screen of report.screens) {
       const { width, height } = pngSize(readFileSync(join(dir, `installer-${screen}.png`)));
       assert.ok(width >= 900 && height >= 600, `${screen}: ${width}×${height}`);
     }
     assert.equal(report.command, 'claude mcp add --scope user nopeeking -- npx -y nopeeking');
+    assert.equal(report.removeOld, 'claude mcp remove passclaude', 'the old passClaude server goes, nothing else');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

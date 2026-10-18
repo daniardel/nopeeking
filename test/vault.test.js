@@ -105,3 +105,18 @@ test('promptPut runs prompt.ps1 with the name only, a 6 minute timeout, and kind
   await cmdVault.promptPut('gh-token', { kind: 'command', created: meta.created });
   assert.deepEqual({ ...JSON.parse(cmdCalls[0].i), comment: undefined }, { kind: 'command', site: '', comment: undefined });
 });
+
+test('migrate moves passClaude entries over, keeps names NoPeeking already has, and oldCount counts what is left', async () => {
+  const fake = fakeWindowsCred();
+  const vault = createVault({ run: fake.run });
+  const comment = encodeMeta(meta);
+  fake.creds.set('passclaude:netflix', { comment, value: 'old-netflix' });
+  fake.creds.set('passclaude:github', { comment, value: 'old-github' });
+  await vault.put('github', meta, 'new-github');
+  assert.equal(await vault.oldCount(), 2);
+  assert.deepEqual(await vault.migrate(), { moved: ['netflix'], kept: ['github'] });
+  assert.equal(await vault.get('netflix'), 'old-netflix');
+  assert.equal(await vault.get('github'), 'new-github');
+  assert.equal(await vault.oldCount(), 1);
+  assert.deepEqual(await vault.migrate(), { moved: [], kept: ['github'] });
+});

@@ -10,6 +10,7 @@ Add it to Claude Code (one time):
 Commands:
   npx nopeeking                 run the MCP server (Claude Code does this for you)
   npx nopeeking install-guard   optional: block shell commands that read saved secrets directly
+  npx nopeeking migrate         move secrets saved by passClaude (NoPeeking's old name) over to NoPeeking
   npx nopeeking help            show this help`;
 
 const [cmd] = process.argv.slice(2);
@@ -23,6 +24,9 @@ if (process.platform !== 'win32') {
 } else if (cmd === 'install-guard') {
   const { installGuard } = await import('./install-guard.js');
   process.exitCode = await installGuard();
+} else if (cmd === 'migrate') {
+  const { migrate } = await import('./migrate.js');
+  process.exitCode = await migrate();
 } else if (['help', '--help', '-h'].includes(cmd)) {
   console.log(HELP);
 } else {

@@ -41,6 +41,14 @@ claude mcp add --scope user nopeeking -- npx -y nopeeking
 
 Then restart Claude Code.
 
+### Coming from passClaude
+
+NoPeeking was called passClaude before version 0.2.0. If you used passClaude:
+
+1. **Remove the old server**, or Claude sees two copies of every tool: `claude mcp remove passclaude`. The one-click installer offers to do this for you.
+2. **Bring your secrets over:** `npx -y nopeeking migrate`. It moves what passClaude saved to NoPeeking, inside Windows, without showing the values. Until then NoPeeking doesn't see them (`list_secrets` tells you how many are waiting).
+3. **If you installed passClaude's guard:** run `npx -y nopeeking install-guard`. It swaps the old guard for the new one.
+
 ## What to say to Claude
 
 | You say | What happens |
@@ -87,14 +95,14 @@ Website passwords and command secrets are kept apart: a website password can onl
 
 **Protected**
 - No NoPeeking tool returns a secret. Secrets don't appear in tool results, so NoPeeking itself never sends them to the model, your transcripts or Anthropic's servers. The ways a secret can still get out are listed under "Not protected".
-- Website passwords are typed only when Chrome's address bar shows the site they were saved for (subdomains included, lookalikes like `netflix.com.evil.ru` refused) and only into a password box.
+- Website passwords are typed only when Chrome's address bar shows the site they were saved for (subdomains included, lookalikes like `netflix.com.evil.ru` refused) and only into a password box. The box must be on an https page of that site: plain http pages (except `localhost` on your own PC) and boxes inside a frame from another site are refused. If the box loses focus while typing, typing stops at once, so no character lands anywhere else.
 - A saved secret is never replaced without a delete first.
 - Phone links are end-to-end encrypted (ECDH P-256 + AES-256-GCM, done in your phone's browser). The relay ([ntfy.sh](https://ntfy.sh)) only sees scrambled data. Each link saves one secret and expires after 5 minutes (but see the link note below).
 
 **Not protected (please read)**
 - Claude Code can run shell commands as you. A Claude that is deliberately trying, or that has been tricked by a malicious web page or file, could read Windows Credential Manager directly. The optional guard (below) blocks the obvious ways. It's a speed bump, not a wall.
 - A tricked Claude could send a command secret somewhere inside the command it runs. Masking protects the output, not network calls. Keep Claude Code's approval prompt on for `run_with_secret` and read the command before you approve it.
-- Masking hides the whole secret in the output, its common encodings (base64, URL-encoded, hex, JSON-escaped), and any piece of 8 or more characters of them, also when Windows PowerShell wraps a long value onto the next line or shortens it with `...`. It can't catch pieces shorter than 8 characters, other encodings, or a value that the command deliberately reshapes, for example by reversing it, splitting it up or re-encoding it. Because it masks pieces, masking can occasionally also hide ordinary text that happens to match part of a secret. Read the command before you approve it.
+- Masking hides the whole secret in the output, its common encodings (base64, also when it is encoded together with other text such as a `user:token` login header, URL-encoded, hex, JSON-escaped, and the UTF-16 forms Windows uses), and any piece of 8 or more characters of them, also when Windows PowerShell wraps a long value onto the next line or shortens it with `...`. It can't catch pieces shorter than 8 characters, other encodings, or a value that the command deliberately reshapes, for example by reversing it, splitting it up or re-encoding it. Because it masks pieces, masking can occasionally also hide ordinary text that happens to match part of a secret. Read the command before you approve it.
 - Once typed, a password sits in the page's password box. Scripts on that page can read it, just like when you type it yourself. So can Claude's own browser tools: Claude in Chrome can run JavaScript on the page, or click "show password" and take a screenshot, and that puts the password in the chat. NoPeeking can't stop this. The site lock only limits where the password is typed. Watch what Claude does on the page after it types.
 - The phone page is served from GitHub Pages ([daniardel/nopeeking-phone](https://github.com/daniardel/nopeeking-phone)). Whoever controls that repo controls the page's code. You can host your own copy (see Configuration).
 - The site lock reads Chrome's address bar. It is tested with English Chrome. Other languages use a fallback that finds the address bar as the first text box outside the web page, which has not been tested in a non-English Chrome yet.
@@ -167,7 +175,7 @@ If you already use one with Claude, that may suit you better. NoPeeking is for p
 
 ## Uninstall
 
-1. Ask Claude to delete your NoPeeking secrets, or remove the `nopeeking:` entries in Credential Manager.
+1. Ask Claude to delete your NoPeeking secrets, or remove the `nopeeking:` entries in Credential Manager (and any `passclaude:` entries left from before 0.2.0).
 2. Run `claude mcp remove nopeeking --scope user`.
 3. If you installed the guard: remove the NoPeeking entry under `hooks.PreToolUse` in `~/.claude/settings.json` (a backup was saved next to it) and delete the `~/.claude/nopeeking` folder.
 

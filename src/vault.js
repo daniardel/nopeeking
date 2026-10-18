@@ -99,6 +99,30 @@ export function createVault({ run = runPs } = {}) {
       return 'saved';
     },
 
+    /**
+     * How many secrets passClaude (the old name) saved, which NoPeeking does not see until they are migrated.
+     * prefix limits this, and migrate, to names that start with it.
+     */
+    async oldCount(prefix = '') {
+      const res = await run('cred.ps1', ['old', prefix]);
+      if (res.code !== EXIT.OK) throw windowsFailed('list', res);
+      return Number.parseInt(res.stdout, 10) || 0;
+    },
+
+    /** Moves passClaude's secrets to NoPeeking, values untouched by Node. Names that already exist in NoPeeking are kept. */
+    async migrate(prefix = '') {
+      const res = await run('cred.ps1', ['migrate', prefix]);
+      if (res.code !== EXIT.OK) throw windowsFailed('migration', res);
+      const moved = [];
+      const kept = [];
+      for (const line of res.stdout.split('\n')) {
+        const [what, name] = line.trim().split('\t');
+        if (what === 'moved') moved.push(name);
+        else if (what === 'kept') kept.push(name);
+      }
+      return { moved, kept };
+    },
+
     async delete(name) {
       const res = await run('cred.ps1', ['delete', checkName(name)]);
       if (res.code === EXIT.NOT_FOUND) return false;

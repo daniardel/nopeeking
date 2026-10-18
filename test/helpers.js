@@ -17,7 +17,7 @@ export function fakeWindowsCred({ popupValue = null } = {}) {
     const [op, name] = args;
     const target = `nopeeking:${name}`;
     switch (op) {
-      case 'list': return result(0, [...creds].map(([t, c]) => `${t}\t${c.comment}\n`).join(''));
+      case 'list': return result(0, [...creds].filter(([t]) => t.startsWith('nopeeking:')).map(([t, c]) => `${t}\t${c.comment}\n`).join(''));
       case 'meta': return creds.has(target) ? result(0, creds.get(target).comment) : result(3);
       case 'get': return creds.has(target) ? result(0, creds.get(target).value) : result(3);
       case 'put': {
@@ -28,6 +28,22 @@ export function fakeWindowsCred({ popupValue = null } = {}) {
         return result(0);
       }
       case 'delete': return creds.delete(target) ? result(0) : result(3);
+      case 'old': return result(0, String([...creds.keys()].filter((t) => t.startsWith(`passclaude:${name ?? ''}`)).length));
+      case 'migrate': {
+        let out = '';
+        for (const [t, c] of [...creds]) {
+          if (!t.startsWith(`passclaude:${name ?? ''}`)) continue;
+          const old = t.slice('passclaude:'.length);
+          if (creds.has(`nopeeking:${old}`)) {
+            out += `kept\t${old}\n`;
+            continue;
+          }
+          creds.set(`nopeeking:${old}`, c);
+          creds.delete(t);
+          out += `moved\t${old}\n`;
+        }
+        return result(0, out);
+      }
       default: throw new Error(`unexpected op ${op}`);
     }
   }

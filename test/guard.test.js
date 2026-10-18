@@ -21,6 +21,13 @@ test('blocks commands that reach for saved secrets directly', () => {
     'CredEnumerate',
     'powershell -EncodedCommand ZQBjAGgAbwA=',
     'pwsh -enc ZQBjAGgAbwA=',
+    'powershell -e ZQBjAGgAbwA=',
+    'powershell.exe -NoProfile -en ZQBjAGgAbwA=',
+    'pwsh -encod ZQBjAGgAbwA=',
+    'powershell /e ZQBjAGgAbwA=',
+    'Start-Process powershell -ArgumentList "-e","ZQBjAGgAbwA="',
+    'cmdkey /generic:passclaude:netflix',
+    '[PassClaude.Cred]::GetSecret("passclaude:netflix")',
   ]) {
     assert.match(guard.verdict(hookInput(command)) ?? '', /Blocked by NoPeeking guard/, command);
   }
@@ -29,7 +36,8 @@ test('blocks commands that reach for saved secrets directly', () => {
 test('allows everyday commands', () => {
   for (const command of [
     'git status', 'npm test', 'npx -y nopeeking install-guard', 'Get-ChildItem', 'echo "type your password"',
-    'ffmpeg -encoders', 'openssl enc -d -in x',
+    'ffmpeg -encoders', 'openssl enc -d -in x', 'node -e "console.log(1)"', 'grep -e foo file',
+    'powershell -ExecutionPolicy Bypass -File x.ps1', 'pwsh -Command "Get-Item x -ea 0"',
   ]) {
     assert.equal(guard.verdict(hookInput(command)), null, command);
   }

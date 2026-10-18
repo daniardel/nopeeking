@@ -6,6 +6,7 @@
 
 const BLOCKED = [
   /nopeeking:/i, // Credential Manager target names
+  /passclaude:/i, // the same, saved by passClaude (the old name) before 0.2.0
   /cred\.ps1/i, // NoPeeking's own vault script
   /\bCred(Read|Enumerate)/i, // the Windows credential APIs
   /advapi32/i, // the DLL that holds them
@@ -15,6 +16,8 @@ const BLOCKED = [
   /PasswordVault/i,
   /\bvaultcmd\b/i,
   /\s-(ec|enc|encodedcommand)\b/i, // PowerShell commands hidden in base64
+  // powershell.exe and pwsh take any start of -EncodedCommand (-e, -en, -enco ...), with - or /, also quoted in an argument list.
+  /\b(powershell|pwsh)\b.*[\s"',][-/](ec|e(n(c(o(d(e(d(c(o(m(m(a(n(d)?)?)?)?)?)?)?)?)?)?)?)?)?)(?=$|[\s"',])/is,
 ];
 
 function verdict(input) {
